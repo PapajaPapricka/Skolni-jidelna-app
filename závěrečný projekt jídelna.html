@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jídelna App PRO</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
+      min-height: 100vh;
+      background-attachment: fixed;
+      padding-top: 80px;
+    }
+
+    /* NAVBAR PŘES CELÉ OKNO - FIXED */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      gap: 15px;
+      flex-wrap: wrap;
+      z-index: 1000;
+      border-bottom: 2px solid rgba(255, 152, 0, 0.3);
+    }
+
+    .nav-left, .nav-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 152, 0, 0.8);
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #e68900;
+      transform: scale(1.05);
+    }
+
+    button.active {
+      background: #1a3a4a !important;
+      border: 1px solid #ff9800;
+    }
+
+    .btn-user {
+      background: #555;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px 10px;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      max-width: 600px;
+      margin: 25px auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 5px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 152, 0, 0.5);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+
+    .search-wrapper:hover,
+    .search-wrapper:focus-within {
+      transform: scale(1.03);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      z-index: 100;
+    }
+
+    #searchInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      outline: none;
+      font-size: 16px;
+    }
+
+    #searchInput::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .nav-select {
+      background-color: rgba(255, 152, 0, 0.8) !important;
+      color: white !important;
+      font-weight: bold !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      padding: 8px 35px 8px 15px !important;
+      border-radius: 20px !important;
+      cursor: pointer;
+      appearance: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      background-image: none !important;
+      outline: none !important;
+      font-size: 14px;
+    }
+
+    .nav-select:hover,
+    .nav-select:focus {
+      box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    #foods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      padding: 20px 0;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ANIMACE PRO ZVÝRAZNĚNÍ KARTY */
+    .card.highlight-card {
+      animation: cardHighlight 0.8s ease-in-out;
+      border-color: #ff9800;
+      box-shadow: 0 0 20px rgba(255, 152, 0, 0.6);
+    }
+
+    @keyframes cardHighlight {
+      0% {
+        border-color: #ff9800;
+        box-shadow: 0 0 30px rgba(255, 152, 0, 0.8);
+        background: rgba(255, 152, 0, 0.15);
+      }
+      50% {
+        border-color: #ff9800;
+        box-shadow: 0 0 20px rgba(255, 152, 0, 0.6);
+      }
+      100% {
+        border-color: transparent;
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    img {
+      width: 100%;
+      border-radius: 10px;
+      height: 180px;
+      object-fit: cover;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #loginPage {
+      text-align: center;
+      margin-top: 120px;
+      padding-top: 40px;
+    }
+
+    input, select {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      margin: 4px;
+      background: rgba(255, 255, 255, 0.9);
+      color: black;
+      font-size: 14px;
+    }
+
+    #adminPanel, #profilePanel, #editPanel {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      border: 1px solid #ff9800;
+    }
+
+    .stars {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
+
+    .stars span {
+      font-size: 24px;
+      cursor: pointer;
+      color: gray;
+      transition: color 0.2s;
+    }
+
+    .stars span:hover, .stars span:hover ~ span {
+      color: gold;
+    }
+
+    .comment-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 10px 0;
+      padding-right: 5px;
+    }
+
+    .comment-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .comment-list::-webkit-scrollbar-thumb {
+      background: #ff9800;
+      border-radius: 10px;
+    }
+
+
+
+ /* HLAVNÍ STYL KOMENTÁŘE */
+ /* HLAVNÍ KOMENTÁŘ - bez pruhu */
+    .comment {
+      font-size: 0.85em;
+      background: rgba(0, 0, 0, 0.3) !important;
+      padding: 5px 10px;
+      margin: 4px 0;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      border-left: 3px solid transparent; /* Žádný pruh */
+    }
+
+    /* ODPOVĚĎ - s oranžovým pruhem a odsazením */
+    .comment.reply {
+      margin-left: 20px !important;
+      border-left: 3px solid #ff9800 !important; /* Pruh zpět u odpovědí */
+      background: rgba(0, 0, 0, 0.3) !important;
+      padding: 4px 8px !important;
+      margin-top: 2px !important;
+      margin-bottom: 2px !important;
+    }
+
+    /* Úprava hlavičky, aby jména v hlavním komentáři u pruhu dobře vypadala */
+    .comm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+
+    .comment div {
+      line-height: 1.3;
+    }
+
+
+    .comm-date {
+      font-size: 0.8em;
+      font-style: italic;
+      opacity: 0.6;
+      font-weight: normal;
+    }
+
+    /* SKUPINA KOMENTÁŘŮ - PRO LEPŠÍ MEZERY */
+    .comment-group {
+      margin-bottom: 15px;
+    }
+
+    /* ABY NEBYLY MEZERY, KDYŽ NIKDO NEODPOVÍDÁ */
+    .comment-group:empty {
+      display: none;
+    }
+    
+    /* PROFESIONÁLNÍ ZVÝRAZNĚNÍ KOMENTÁŘE - BEZ BLIKÁNÍ */
+    .comment.highlight-comment {
+      animation: smoothCommentHighlight 0.8s ease-in-out forwards;
+      background: rgba(255, 152, 0, 0.25) !important;
+      border-left-color: #ff9800 !important;
+      box-shadow: inset 0 0 8px rgba(255, 152, 0, 0.3), 0 0 12px rgba(255, 152, 0, 0.3) !important;
+    }
+
+    @keyframes smoothCommentHighlight {
+      0% {
+        background: rgba(255, 152, 0, 0.35);
+        box-shadow: inset 0 0 12px rgba(255, 152, 0, 0.4), 0 0 18px rgba(255, 152, 0, 0.4);
+      }
+      100% {
+        background: rgba(255, 152, 0, 0.25);
+        box-shadow: inset 0 0 8px rgba(255, 152, 0, 0.3), 0 0 12px rgba(255, 152, 0, 0.3);
+      }
+    }
+
+    /* Křížky u panelů - přidej do CSS */
+    #adminPanel, #profilePanel, #editPanel {
+      position: relative;
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      border: 1px solid #ff9800;
+    }
+
+    #adminPanel h3, #profilePanel h3, #editPanel h3 {
+      padding-right: 30px;
+    }
+
+    .panel-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      cursor: pointer;
+      font-size: 24px;
+      color: #ff9800;
+      font-weight: bold;
+      transition: transform 0.2s, color 0.2s;
+    }
+
+    .panel-close:hover {
+      transform: rotate(90deg);
+      color: #e68900;
+    }	
+
+    .comm-header {
+      display: flex;
+      justify-content: space-between;
+      opacity: 0.8;
+      font-size: 0.85em;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+    .comm-date {
+      font-size: 0.8em;
+      font-style: italic;
+      opacity: 0.7;
+    }
+
+    .fav-icon {
+      cursor: pointer;
+      margin-left: 8px;
+      font-size: 0.9em;
+      transition: transform 0.2s;
+    }
+
+    .fav-icon:hover {
+      transform: scale(1.2);
+    }
+
+    .empty-msg {
+      text-align: center;
+      width: 100%;
+      grid-column: 1 / -1;
+      padding: 50px;
+      opacity: 0.5;
+      font-size: 1.2em;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(5px);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content-container {
+      position: relative;
+      display: inline-block;
+      background: transparent;
+      filter: drop-shadow(0 0 30px rgba(255, 152, 0, 0.8));
+      max-width: 95vw;
+      max-height: 92vh;
+      overflow: visible;
+    }
+
+    .modal-content {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 95vw;
+      max-height: 92vh;
+      object-fit: contain;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #ff9800 !important;
+      width: 45px;
+      height: 45px;
+      border: 2px solid white;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 10000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: all 0.3s;
+    }
+
+    .close-modal::before, .close-modal::after {
+      content: "";
+      position: absolute;
+      width: 25px;
+      height: 4px;
+      background-color: white;
+      border-radius: 2px;
+    }
+
+    .close-modal::before {
+      transform: rotate(45deg);
+    }
+
+    .close-modal::after {
+      transform: rotate(-45deg);
+    }
+
+    .close-modal:hover {
+      background: #e68900 !important;
+      transform: scale(1.1) rotate(90deg);
+    }
+
+    .userRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      color: #333;
+    }
+
+    .userRow span {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .userRow button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .reset-btn {
+      background: #f39c12 !important;
+    }
+
+    .delete-btn {
+      background: #e74c3c !important;
+    }
+
+    h1, h3 {
+      margin-top: 0;
+    }
+
+    small {
+      opacity: 0.8;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid rgba(255, 152, 0, 0.3);
+      margin: 15px 0;
+    }
+	
+    /* POLE S HESLEM S IKONOU */
+    .password-input-wrapper {
+      position: relative;
+      display: inline-block;
+      margin: 4px;
+    }
+
+    .password-input-wrapper input {
+      padding: 8px;
+      padding-right: 35px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.9);
+      color: black;
+      font-size: 14px;
+    }
+
+    .password-toggle-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 16px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      color: #666;
+      user-select: none;
+      pointer-events: auto;
+    }
+
+    .password-toggle-icon:hover {
+      opacity: 1;
+    }
+	
+  </style>
+</head>
+<body>
+
+<!-- PŘIHLAŠOVACÍ STRÁNKA -->
+<div id="loginPage">
+  <h1>🍽️ Jídelna App</h1>
+  <input id="loginUser" placeholder="Jméno"><br>
+  <div class="password-input-wrapper">
+    <input id="loginPass" type="password" placeholder="Heslo">
+    <span class="password-toggle-icon" onclick="togglePasswordVisibility('loginPass')">
+      <i class="fa-regular fa-eye"></i>
+    </span>
+  </div><br>
+
+  <div id="registerExtra" class="hidden">
+    <div class="password-input-wrapper">
+      <input id="loginPassConfirm" type="password" placeholder="Potvrďte heslo">
+      <span class="password-toggle-icon" onclick="togglePasswordVisibility('loginPassConfirm')">
+        <i class="fa-regular fa-eye"></i>
+      </span>
+    </div><br>
+  </div>
+
+  <div id="loginGroup">
+    <button onclick="login()">Přihlásit</button>
+    <p onclick="showRegister()" style="cursor:pointer; color:#ff9800; text-decoration:underline; margin-top:15px;">Chci se zaregistrovat</p>
+  </div>
+
+  <div id="registerGroup" class="hidden">
+    <button onclick="register()" style="background:#27ae60">Vytvořit účet</button>
+    <p onclick="showLogin()" style="cursor:pointer; color:#ff9800; text-decoration:underline; margin-top:15px;">Zpět na přihlášení</p>
+  </div>
+</div>
+
+<!-- HLAVNÍ APLIKACE -->
+<div id="app" class="hidden">
+  <!-- NAVBAR - FIXED PŘES CELÉ OKNO -->
+  <nav>
+    <div class="nav-left">
+      <button id="btn-all" class="cat-btn" onclick="resetSearch(); render('all')">Vše</button>
+      <button id="btn-Bezmasé" class="cat-btn" onclick="resetSearch(); render('Bezmasé')">Bezmasé</button>
+      <button id="btn-Masité" class="cat-btn" onclick="resetSearch(); render('Masité')">Masité</button>
+      <button id="btn-Polívky" class="cat-btn" onclick="resetSearch(); render('Polívky')">Polívky</button>
+      <button id="btn-Doplňky" class="cat-btn" onclick="resetSearch(); render('Doplňky')">Doplňky</button>
+      <button id="btn-Pití" class="cat-btn" onclick="resetSearch(); render('Pití')">Pití</button>
+      <button id="btn-Sladké" class="cat-btn" onclick="resetSearch(); render('Sladké')">Sladké</button>
+      <button id="btn-favorite" class="cat-btn" onclick="resetSearch(); render('favorite')">💛 Oblíbené</button>
+      <button id="btn-leaderboard" class="cat-btn" onclick="resetSearch(); showLeaderboard()">🏆 Žebřík</button>
+    </div>
+    <div class="nav-right">
+      <span id="userInfo" style="font-weight:bold; margin-right:10px;"></span>
+      <button id="adminBtn" onclick="toggleAdmin()" class="hidden btn-user">⚙️ Admin</button>
+      <button onclick="toggleProfile()" class="btn-user">Profil</button>
+      <button onclick="logout()" style="background:#d32f2f">Odhlásit</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- VYHLEDÁVACÍ BOX -->
+    <div class="search-wrapper">
+      <input id="searchInput" placeholder="Hledej..." oninput="filterFoods()">
+      <select id="searchMode" class="nav-select" onchange="filterFoods(); this.blur();">
+        <option value="foods">Jídla</option>
+        <option value="comments">Zprávy</option>
+        <option value="users">Jména</option>
+      </select>
+      <span style="position: absolute; right: 20px; color: white; pointer-events: none; font-size: 10px; z-index: 3;">▼</span>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" class="hidden">
+      <div style="position: relative;">
+        <h3>➕ Přidat jídlo</h3>
+        <span onclick="document.getElementById('adminPanel').classList.add('hidden')" style="position: absolute; top: 5px; right: 15px; cursor: pointer; font-size: 24px; color: #ff9800; font-weight: bold;">✕</span>
+      </div>
+      <input id="name" placeholder="Název"><br>
+      <select id="category">
+        <option>Bezmasé</option>
+        <option>Masité</option>
+        <option>Polívky</option>
+        <option>Doplňky</option>
+        <option>Pití</option>
+        <option>Sladké</option>
+      </select><br>
+      <input type="file" id="file"><br>
+      <button onclick="addFood()" style="background:#27ae60">Přidat do nabídky</button>
+      <hr>
+      <h3>👥 Uživatelé</h3>
+      <div id="userList"></div>
+    </div>
+
+    <!-- EDIT PANEL -->
+    <div id="editPanel" class="hidden">
+      <div style="position: relative;">
+        <h3>✏️ Editovat jídlo</h3>
+        <span onclick="document.getElementById('editPanel').classList.add('hidden')" style="position: absolute; top: 5px; right: 15px; cursor: pointer; font-size: 24px; color: #ff9800; font-weight: bold;">✕</span>
+      </div>
+      <input id="editId" type="hidden">
+      <input id="editName" placeholder="Nový název"><br>
+      <select id="editCategory">
+        <option>Bezmasé</option>
+        <option>Masité</option>
+        <option>Polívky</option>
+        <option>Doplňky</option>
+        <option>Pití</option>
+        <option>Sladké</option>
+      </select><br>
+      <input type="file" id="editFile"><br>
+      <button onclick="saveEdit()" style="background:#27ae60">Uložit změny</button>
+      <button onclick="resetVotes()" style="background:#e74c3c">Vynulovat hlasy</button>
+      <button onclick="document.getElementById('editPanel').classList.add('hidden')" style="background:#555">Zrušit</button>
+    </div>
+
+    <!-- PROFIL PANEL -->
+    <div id="profilePanel" class="hidden">
+      <div style="position: relative;">
+        <h3>👤 Můj profil</h3>
+        <span onclick="document.getElementById('profilePanel').classList.add('hidden')" style="position: absolute; top: 5px; right: 15px; cursor: pointer; font-size: 24px; color: #ff9800; font-weight: bold;">✕</span>
+      </div>
+      <input id="newName" placeholder="Nové jméno"><br>
+      <div class="password-input-wrapper">
+        <input id="newPass" type="password" placeholder="Nové heslo">
+        <span class="password-toggle-icon" onclick="togglePasswordVisibility('newPass')">
+          <i class="fa-regular fa-eye"></i>
+        </span>
+      </div>
+      <div class="password-input-wrapper">
+        <input id="newPassConfirm" type="password" placeholder="Potvrzení hesla">
+        <span class="password-toggle-icon" onclick="togglePasswordVisibility('newPassConfirm')">
+          <i class="fa-regular fa-eye"></i>
+        </span>
+      </div>
+      <button onclick="updateProfile()" style="background:#27ae60">Uložit změny</button>
+    </div>
+
+
+    <!-- SEZNAM JÍDEL -->
+    <div id="foods"></div>
+  </div>
+</div>
+
+<!-- MODAL PRO VELKÝ OBRÁZEK -->
+<div id="imageModal" class="modal">
+  <span class="close-modal"></span>
+  <div class="modal-content-container">
+    <img class="modal-content" id="expandedImg">
+  </div>
+</div>
+
+<script>
+  // --- GLOBÁLNÍ PROMĚNNÉ ---
+  let users = JSON.parse(localStorage.getItem("users")) || [];
+  let foods = JSON.parse(localStorage.getItem("foods")) || [];
+  let currentCategory = "all";
+
+  function save() {
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("foods", JSON.stringify(foods));
+  }
+
+  function resetSearch() {
+    const sInput = document.getElementById("searchInput");
+    const sMode = document.getElementById("searchMode");
+    if (sInput) sInput.value = "";
+    if (sMode) sMode.value = "foods";
+  }
+
+  // --- BEZPEČNOSTNÍ FUNKCE (SHA-256) ---
+  async function hashPassword(password) {
+    const msgUint8 = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Inicializace admina při startu
+  async function initAdmin() {
+    if (!users.find(u => u.name === "admin")) {
+      const hashedPass = await hashPassword("admin123");
+      users.push({ name: "admin", pass: hashedPass, role: "admin" });
+      save();
+    }
+  }
+
+  initAdmin();
+
+  // --- NAVIGACE A UI ---
+  function updateNavHighlight(cat) {
+    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+    let activeBtn = document.getElementById('btn-' + cat);
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  // --- AUTH SYSTÉM (LOGIN / REGISTER / LOGOUT) ---
+  async function register() {
+    let u = loginUser.value.trim();
+    let p = loginPass.value.trim();
+    let pcField = document.getElementById("loginPassConfirm");
+
+    if (!pcField) return alert("Chyba v HTML!");
+    let pc = pcField.value.trim();
+    if (u.length < 3 || p.length < 3) return alert("Min 3 znaky pro jméno i heslo");
+    if (p !== pc) return alert("Hesla se neshodují!");
+    if (users.find(x => x.name === u)) return alert("Uživatel už existuje");
+
+    const hashedPass = await hashPassword(p);
+    users.push({ name: u, pass: hashedPass, role: "user" });
+    save();
+
+    alert("Registrace proběhla v pořádku! Teď se můžeš přihlásit.");
+    loginPass.value = "";
+    pcField.value = "";
+    showLogin();
+    loginPass.focus();
+  }
+
+  async function login() {
+    let u = loginUser.value.trim(), p = loginPass.value.trim();
+    const hashedPass = await hashPassword(p);
+
+    let user = users.find(x => x.name === u && x.pass === hashedPass);
+    if (!user) return alert("Špatné údaje");
+
+    localStorage.setItem("currentUser", u);
+    localStorage.setItem("role", user.role);
+    loginUser.value = "";
+    loginPass.value = "";
+    startApp();
+  }
+
+  function logout() {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("role");
+    app.classList.add("hidden");
+    adminPanel.classList.add("hidden");
+    profilePanel.classList.add("hidden");
+    if (typeof editPanel !== 'undefined') editPanel.classList.add("hidden");
+    loginPage.classList.remove("hidden");
+
+    loginUser.value = "";
+    loginPass.value = "";
+    if (document.getElementById("loginPassConfirm")) {
+      document.getElementById("loginPassConfirm").value = "";
+    }
+  }
+
+  // --- APLIKAČNÍ LOGIKA ---
+  function startApp() {
+    loginPage.classList.add("hidden");
+    app.classList.remove("hidden");
+    userInfo.innerText = "👤 " + localStorage.getItem("currentUser");
+    if (isAdmin()) {
+      adminBtn.classList.remove("hidden");
+      renderUsers();
+    } else {
+      adminBtn.classList.add("hidden");
+      adminPanel.classList.add("hidden");
+    }
+    render("all");
+  }
+
+  if (localStorage.getItem("currentUser")) startApp();
+
+  function isAdmin() {
+    return localStorage.getItem("role") === "admin";
+  }
+
+  function toggleAdmin() {
+    if (isAdmin()) {
+      adminPanel.classList.toggle("hidden");
+      editPanel.classList.add("hidden");
+      profilePanel.classList.add("hidden");
+    }
+  }
+
+  function toggleProfile() {
+    profilePanel.classList.toggle("hidden");
+    adminPanel.classList.add("hidden");
+    editPanel.classList.add("hidden");
+    newName.value = localStorage.getItem("currentUser");
+  }
+
+  // --- PROFIL ---
+  async function updateProfile() {
+    let oldName = localStorage.getItem("currentUser");
+    let user = users.find(u => u.name === oldName);
+    let newN = newName.value.trim();
+
+    if (newN.length > 2 && newN !== oldName) {
+      if (users.find(u => u.name === newN)) return alert("Jméno už existuje");
+      foods.forEach(f => {
+        if (f.comments) f.comments.forEach(c => { if (c.user === oldName) c.user = newN; });
+        if (f.voters) f.voters = f.voters.map(v => v === oldName ? newN : v);
+        if (f.ratings) f.ratings.forEach(r => { if (r.user === oldName) r.user = newN; });
+        if (f.favorites) f.favorites = f.favorites.map(fav => fav === oldName ? newN : fav);
+      });
+      user.name = newN;
+      localStorage.setItem("currentUser", newN);
+    }
+
+    if (newPass.value.length > 2) {
+      user.pass = await hashPassword(newPass.value);
+    }
+
+    save();
+    profilePanel.classList.add("hidden");
+    startApp();
+    alert("Uloženo");
+  }
+
+  // --- ADMIN PANEL ---
+  function renderUsers() {
+    let list = document.getElementById("userList");
+    list.innerHTML = "";
+    users.forEach(u => {
+      if (u.name !== "admin") {
+        list.innerHTML += `
+          <div class="userRow">
+            <span>${u.name}</span>
+            <div style="display:flex; gap:5px">
+              <button class="reset-btn" onclick="resetUserPass('${u.name}')">Reset</button>
+              <button class="delete-btn" onclick="deleteUser('${u.name}')">Smazat</button>
+            </div>
+          </div>`;
+      }
+    });
+  }
+
+  async function resetUserPass(n) {
+    if (confirm("Resetovat heslo uživateli " + n + " na '123456'?")) {
+      let user = users.find(u => u.name === n);
+      if (user) {
+        user.pass = await hashPassword("123456");
+        save();
+        alert("Heslo resetováno na: 123456");
+      }
+    }
+  }
+
+  function deleteUser(n) {
+    if (confirm("Opravdu smazat uživatele " + n + "?")) {
+      users = users.filter(u => u.name !== n);
+      foods.forEach(f => {
+        if (f.comments) f.comments = f.comments.filter(c => c.user !== n);
+        if (f.voters) f.voters = f.voters.filter(v => v !== n);
+        if (f.ratings) f.ratings = f.ratings.filter(r => r.user !== n);
+        if (f.favorites) f.favorites = f.favorites.filter(fav => fav !== n);
+      });
+      save();
+      renderUsers();
+      render(currentCategory);
+    }
+  }
+
+  // --- RENDER JÍDEL ---
+  function render(cat, customList = null) {
+    currentCategory = cat;
+    updateNavHighlight(cat);
+    let fDiv = document.getElementById("foods");
+    fDiv.innerHTML = "";
+    let user = localStorage.getItem("currentUser");
+    let list = customList || foods;
+
+    if (!customList) {
+      if (cat === 'favorite') list = foods.filter(f => f.favorites?.includes(user));
+      else if (cat === 'leaderboard') {
+        list = [...foods].sort((a, b) => {
+          let aV = a.ratings ? a.ratings.reduce((s, r) => s + r.val, 0) / (a.ratings.length || 1) : 0;
+          let bV = b.ratings ? b.ratings.reduce((s, r) => s + r.val, 0) / (b.ratings.length || 1) : 0;
+          return bV - aV;
+        });
+      } else if (cat !== 'all') list = foods.filter(f => f.category === cat);
+    }
+
+    if (list.length === 0) {
+      fDiv.innerHTML = `<div class="empty-msg">Tady zatím nic není...</div>`;
+      return;
+    }
+
+    list.forEach((f) => {
+      let totalVal = f.ratings ? f.ratings.reduce((sum, r) => sum + r.val, 0) : 0;
+      let avg = f.ratings && f.ratings.length ? (totalVal / f.ratings.length).toFixed(1) : "0";
+      let hasVoted = f.voters && f.voters.includes(user) && !isAdmin();
+
+      // --- LOGIKA VLÁKEN KOMENTÁŘŮ ---
+let mainComments = (f.comments || []).filter(c => !c.parentId);
+                  let commsHtml = mainComments.reverse().map(c => {
+        let replies = (f.comments || []).filter(r => r.parentId === c.id);
+let repliesHtml = replies.map(r => {
+          let rId = r.id;
+          return `
+            <div class="comment reply" data-comment-id="${r.id}" style="margin-left: 20px; border-left: 2px solid #ff9800; background: rgba(0,0,0,0.2); padding: 4px 8px; margin: 2px 0;">
+              <div class="comm-header" style="margin-bottom: 0;">
+                <b style="color: #ff9800;">${r.user}</b>
+                <span class="comm-date" style="font-size: 0.9em;">${r.date || ""} ${r.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${rId})">✕</span>` : ""}</span>
+              </div>
+              <div style="line-height: 1.2;">${r.text}</div>
+            </div>`;
+        }).join("");
+
+        let cId = c.id;
+        return `
+          <div class="comment-group" style="margin-bottom: 8px;">
+            <div class="comment" data-comment-id="${c.id}" style="padding: 4px 8px; margin: 2px 0;">
+              <div class="comm-header" style="margin-bottom: 0;">
+                <b style="color: #ff9800;">${c.user}</b>
+                <span class="comm-date" style="font-size: 0.9em;">${c.date || ""} ${c.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${cId})">✕</span>` : ""}</span>
+              </div>
+              <div style="line-height: 1.2;">${c.text}</div>
+              <div style="text-align:right; margin-top: 2px; line-height: 1;">
+                <small style="cursor:pointer; color:#ff9800; font-weight:bold; font-size: 0.85em;"
+                       onclick="setReply(${f.id}, ${c.id}, '${c.user}')">Odpovědět</small>
+              </div>
+            </div>
+            ${repliesHtml}
+          </div>`;
+      }).join("");
+
+
+
+      // --- RENDER KARTY JÍDLA ---
+      fDiv.innerHTML += `
+      <div class="card" data-food-id="${f.id}">
+        <h3 style="margin-top:0">${f.name} <span class="fav-icon" onclick="toggleFavorite(${f.id})">${f.favorites?.includes(user) ? '💛' : '🤍'}</span></h3>
+        <small>${f.category}</small>
+        <img src="${f.image}" onclick="openImage('${f.image}')" style="cursor:pointer">
+        <p>⭐ Průměr: <strong>${avg}</strong> (${f.ratings ? f.ratings.length : 0}x)</p>
+       
+        ${hasVoted ? '<div style="color:#ff9800; font-weight:bold;">✓ Už jsi hlasoval!</div>' : `
+          <div class="stars">
+            <span onclick="rate(${f.id}, 5)">★</span><span onclick="rate(${f.id}, 4)">★</span>
+            <span onclick="rate(${f.id}, 3)">★</span><span onclick="rate(${f.id}, 2)">★</span>
+            <span onclick="rate(${f.id}, 1)">★</span>
+          </div>`}
+       
+        <div class="comment-list">${commsHtml || '<div style="opacity:0.3; font-size:0.8em; padding:10px;">Zatím žádné komentáře...</div>'}</div>
+       
+        <div id="replyInfo${f.id}" class="hidden" style="font-size: 0.75em; color: #ff9800; margin-bottom: 5px; padding-left: 5px;"></div>
+       
+        <div style="display:flex; gap:5px; margin-top:10px;">
+          <input id="commInp${f.id}" placeholder="Komentář..." style="flex:1; padding:8px; border-radius:5px; border:none; color:black;">
+          <button id="commBtn${f.id}" onclick="addComm(${f.id})" style="padding:8px 15px;">OK</button>
+        </div>
+       
+        ${isAdmin() ? `
+          <div style="margin-top:10px;">
+            <button onclick="openEdit(${f.id})" style="background:#555">✏️ Upravit</button>
+            <button onclick="deleteFood(${f.id})" style="background:#e74c3c">🗑️ Smazat</button>
+          </div>` : ''}
+      </div>`;
+    });}
+
+// --- RATE / COMMENT / FOOD MGMT ---
+function rate(id, val) {
+  let f = foods.find(x => x.id == id);
+  let user = localStorage.getItem("currentUser");
+  if (!isAdmin() && f.voters.includes(user)) return;
+  f.ratings.push({ user: user, val: val });
+  f.voters.push(user);
+  save();
+  rerender();
+}
+
+function addComm(id, parentCommId = null) {
+  let inp = document.getElementById("commInp" + id);
+  if (!inp.value.trim()) return;
+
+  let f = foods.find(x => x.id == id);
+  if (!f.comments) f.comments = [];
+
+  // Ulož aktuální pozici scrollu
+  const card = document.querySelector(`[data-food-id="${id}"]`);
+  const commentList = card.querySelector('.comment-list');
+  const scrollTop = commentList ? commentList.scrollTop : 0;
+
+  let now = new Date();
+  let timeStr = now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0');
+  let dateStr = now.getDate() + "." + (now.getMonth() + 1) + ".";
+
+  f.comments.push({
+    id: Date.now(),
+    parentId: parentCommId,
+    user: localStorage.getItem("currentUser"),
+    text: inp.value,
+    time: timeStr,
+    date: dateStr
+  });
+
+  inp.value = "";
+  cancelReply(id);
+  save();
+
+  // Rerender a vrátí pozici scrollu
+  if (currentCategory === "leaderboard") {
+    showLeaderboard();
+  } else {
+    render(currentCategory);
+  }
+
+  // Vrátí se na původní pozici
+  setTimeout(() => {
+    const newCard = document.querySelector(`[data-food-id="${id}"]`);
+    const newCommentList = newCard.querySelector('.comment-list');
+    if (newCommentList) {
+      newCommentList.scrollTop = scrollTop;
+    }
+  }, 0);
+}
+
+function setReply(foodId, commId, userName) {
+  const info = document.getElementById("replyInfo" + foodId);
+  if (info) {
+    info.innerHTML = `Odpovídáš uživateli <b>${userName}</b> <span onclick="cancelReply(${foodId})" style="cursor:pointer; color:red; margin-left:5px">✕</span>`;
+    info.classList.remove("hidden");
+  }
+  document.getElementById("commInp" + foodId).focus();
+  const btn = document.getElementById("commBtn" + foodId);
+  if (btn) btn.setAttribute("onclick", `addComm(${foodId}, ${commId})`);
+}
+
+function cancelReply(foodId) {
+  const info = document.getElementById("replyInfo" + foodId);
+  if (info) {
+    info.innerHTML = "";
+    info.classList.add("hidden");
+  }
+  const btn = document.getElementById("commBtn" + foodId);
+  if (btn) btn.setAttribute("onclick", `addComm(${foodId})`);
+}
+
+
+
+  function addFood() {
+    let fileInput = document.getElementById("file"), n = document.getElementById("name").value.trim();
+    if (!fileInput.files || !fileInput.files.length || !n) return alert("Název a foto!");
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      foods.unshift({
+        id: Date.now(),
+        name: n,
+        category: document.getElementById("category").value,
+        image: e.target.result,
+        ratings: [],
+        voters: [],
+        favorites: [],
+        comments: []
+      });
+      save();
+      render("all");
+      document.getElementById("name").value = "";
+      document.getElementById("file").value = "";
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  }
+
+  function deleteFood(id) {
+    if (confirm("Smazat?")) {
+      foods = foods.filter(f => f.id !== id);
+      save();
+      render(currentCategory);
+    }
+  }
+
+  function showRegister() {
+    document.getElementById("registerExtra").classList.remove("hidden");
+    document.getElementById("loginGroup").classList.add("hidden");
+    document.getElementById("registerGroup").classList.remove("hidden");
+    loginPassConfirm.value = "";
+  }
+
+  function showLogin() {
+    document.getElementById("registerExtra").classList.add("hidden");
+    document.getElementById("loginGroup").classList.remove("hidden");
+    document.getElementById("registerGroup").classList.add("hidden");
+  }
+
+  function showLeaderboard() {
+    let sorted = [...foods].sort((a, b) => {
+      let avgA = a.ratings.length ? a.ratings.reduce((s, r) => s + r.val, 0) / a.ratings.length : 0;
+      let avgB = b.ratings.length ? b.ratings.reduce((s, r) => s + r.val, 0) / b.ratings.length : 0;
+      return avgB - avgA;
+    });
+    render("leaderboard", sorted);
+  }
+
+
+
+  function toggleFavorite(id) {
+    let f = foods.find(x => x.id == id);
+    let user = localStorage.getItem("currentUser");
+    if (!f.favorites) f.favorites = [];
+    if (f.favorites.includes(user)) {
+      f.favorites = f.favorites.filter(u => u !== user);
+    } else {
+      f.favorites.push(user);
+    }
+    save();
+    rerender();
+  }
+
+  function openEdit(id) {
+    let f = foods.find(x => x.id == id);
+    document.getElementById("editId").value = f.id;
+    document.getElementById("editName").value = f.name;
+    document.getElementById("editPanel").classList.remove("hidden");
+    document.getElementById("adminPanel").classList.add("hidden");
+    document.getElementById("profilePanel").classList.add("hidden");
+  }
+
+  function resetVotes() {
+    let id = document.getElementById("editId").value;
+    let f = foods.find(x => x.id == id);
+    if (!f) return;
+    if (confirm("Opravdu chceš vynulovat hodnocení?")) {
+      f.ratings = [];
+      f.voters = [];
+      save();
+      rerender();
+    }
+  }
+
+  // --- VYHLEDÁVÁNÍ S ZVÝRAZŇOVÁNÍM ---
+  function filterFoods() {
+    const query = document.getElementById("searchInput").value.toLowerCase();
+    const mode = document.getElementById("searchMode").value;
+    const fDiv = document.getElementById("foods");
+
+    if (!query) {
+      render(currentCategory);
+      return;
+    }
+
+    // REŽIM: HLEDÁNÍ JÍDEL
+    if (mode === "foods") {
+      let filtered = foods.filter(f => f.name.toLowerCase().includes(query));
+      render(currentCategory, filtered);
+    }
+    // REŽIM: HLEDÁNÍ ZPRÁV NEBO JMEN
+    else {
+      fDiv.innerHTML = "";
+      let found = false;
+      foods.forEach(f => {
+        if (f.comments) {
+          f.comments.forEach(c => {
+            const match = (mode === "comments")
+              ? c.text.toLowerCase().includes(query)
+              : c.user.toLowerCase().includes(query);
+            if (match) {
+              found = true;
+              fDiv.innerHTML += `
+                <div class="card" style="border-left: 5px solid #ff9800; cursor: pointer; margin-bottom:10px;" onclick="goToFood(${f.id}, ${c.id})" >
+                  <div style="display:flex; justify-content:space-between; opacity:0.7; font-size:0.85em; margin-bottom:5px;">
+                    <span>Jídlo: <b>${f.name}</b></span>
+                    <span>${c.date || ""}</span>
+                  </div>
+                  <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                    <b style="color: #ff9800;">${c.user}:</b> ${c.text}
+                  </div>
+                  <div style="text-align:right; color:#ff9800; font-size:0.75em; margin-top:8px; font-weight:bold;">
+                    Přejít k jídlu ➔
+                  </div>
+                </div>`;
+            }
+          });
+        }
+      });
+      if (!found) {
+        fDiv.innerHTML = `<div class="empty-msg">Nic nenalezeno pro výraz "${query}"</div>`;
+      }
+    }
+  }
+
+  // NAVIGACE NA JÍDLO S ZVÝRAZŇOVÁNÍM KARTY A KOMENTÁŘE
+function goToFood(foodId, commentId) {
+    resetSearch();
+    render(currentCategory);
+   
+    setTimeout(() => {
+        const foodCard = document.querySelector(`[data-food-id="${foodId}"]`);
+        if (!foodCard) return;
+
+        // 1. Scroll celého okna na kartu jídla
+        foodCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        foodCard.classList.add('highlight-card');
+        setTimeout(() => foodCard.classList.remove('highlight-card'), 2000);
+
+        // 2. Najdeme konkrétní komentář (už i odpověď díky tvé úpravě)
+        const targetComm = document.querySelector(`[data-comment-id="${commentId}"]`);
+        const commentList = foodCard.querySelector('.comment-list');
+       
+        if (targetComm && commentList) {
+            // KLÍČOVÝ VÝPOČET: Rozdíl pozic mezi seznamem a komentářem
+            const listRect = commentList.getBoundingClientRect();
+            const commRect = targetComm.getBoundingClientRect();
+           
+            // Toto pošle komentář přesně k hornímu okraji okna comment-list
+            const targetScrollTop = (commRect.top - listRect.top) + commentList.scrollTop;
+
+            commentList.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth'
+            });
+           
+            // 3. Zvýraznění
+            targetComm.classList.add('highlight-comment');
+            setTimeout(() => targetComm.classList.remove('highlight-comment'), 2000);
+        }
+    }, 450);
+}
+
+  async function saveEdit() {
+    let id = document.getElementById("editId").value;
+    let f = foods.find(x => x.id == id);
+    if (!f) return alert("Chyba: jídlo nenalezeno");
+
+    let newName = document.getElementById("editName").value.trim();
+    if (newName.length > 0) f.name = newName;
+
+    let fileInput = document.getElementById("editFile");
+    if (fileInput.files && fileInput.files.length > 0) {
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        f.image = e.target.result;
+        save();
+        rerender();
+        document.getElementById("editPanel").classList.add("hidden");
+        fileInput.value = "";
+        alert("Změny uloženy!");
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else {
+      save();
+      rerender();
+      document.getElementById("editPanel").classList.add("hidden");
+      alert("Změny uloženy!");
+    }
+  }
+
+  // --- MODAL PRO OBRÁZKY ---
+  function openImage(imgSrc) {
+    const modal = document.getElementById("imageModal");
+    const expandedImg = document.getElementById("expandedImg");
+    if (modal && expandedImg) {
+      modal.style.display = "flex";
+      expandedImg.src = imgSrc;
+    }
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById("imageModal");
+    if (event.target == modal || event.target.classList.contains('close-modal')) {
+      modal.style.display = "none";
+    }
+  }
+
+document.addEventListener("keydown", function(event) {
+  // Kontrola, jestli byl stisknut Enter
+  if (event.key === "Enter") {
+    // Zjistíme, v jakém prvku jsme (např. input pro komentář nebo login)
+    const activeElement = document.activeElement;
+   
+    if (activeElement.tagName === "INPUT") {
+      // Najdeme nejbližší tlačítko v tom samém divu (kontejneru)
+      const parent = activeElement.parentElement;
+      const btn = parent.querySelector("button");
+     
+      if (btn) {
+        event.preventDefault(); // Zabrání nechtěnému reloadu stránky
+        btn.click(); // Simuluje kliknutí na tlačítko
+      }
+    }
+  }
+});
+
+  // --- FUNKCE PRO ZOBRAZENÍ/SKRYTÍ HESLA ---
+
+
+  // --- AKTUALIZOVANÁ FUNKCE PRO PROFIL ---
+  async function updateProfile() {
+    let oldName = localStorage.getItem("currentUser");
+    let user = users.find(u => u.name === oldName);
+    let newN = newName.value.trim();
+
+    if (newN.length > 2 && newN !== oldName) {
+      if (users.find(u => u.name === newN)) return alert("Jméno už existuje");
+      foods.forEach(f => {
+        if (f.comments) f.comments.forEach(c => { if (c.user === oldName) c.user = newN; });
+        if (f.voters) f.voters = f.voters.map(v => v === oldName ? newN : v);
+        if (f.ratings) f.ratings.forEach(r => { if (r.user === oldName) r.user = newN; });
+        if (f.favorites) f.favorites = f.favorites.map(fav => fav === oldName ? newN : fav);
+      });
+      user.name = newN;
+      localStorage.setItem("currentUser", newN);
+    }
+
+    let newPass = document.getElementById("newPass").value.trim();
+    let newPassConfirm = document.getElementById("newPassConfirm").value.trim();
+    
+    if (newPass.length > 0 || newPassConfirm.length > 0) {
+      if (newPass !== newPassConfirm) {
+        return alert("Hesla se neshodují!");
+      }
+      if (newPass.length < 3) {
+        return alert("Heslo musí mít alespoň 3 znaky!");
+      }
+      user.pass = await hashPassword(newPass);
+      document.getElementById("newPass").value = "";
+      document.getElementById("newPassConfirm").value = "";
+      document.getElementById("newPass").type = "password";
+      document.getElementById("newPassConfirm").type = "password";
+    }
+
+    save();
+    profilePanel.classList.add("hidden");
+    startApp();
+    alert("Uloženo");
+  }
+
+  // --- AKTUALIZOVANÁ FUNKCE NA OTEVŘENÍ EDITACE ---
+  function openEdit(id) {
+    let f = foods.find(x => x.id == id);
+    document.getElementById("editId").value = f.id;
+    document.getElementById("editName").value = f.name;
+    document.getElementById("editCategory").value = f.category;
+    document.getElementById("editPanel").classList.remove("hidden");
+    document.getElementById("adminPanel").classList.add("hidden");
+    document.getElementById("profilePanel").classList.add("hidden");
+  }
+
+  // --- AKTUALIZOVANÁ FUNKCE NA ULOŽENÍ EDITACE ---
+  async function saveEdit() {
+    let id = document.getElementById("editId").value;
+    let f = foods.find(x => x.id == id);
+    if (!f) return alert("Chyba: jídlo nenalezeno");
+
+    let newName = document.getElementById("editName").value.trim();
+    if (newName.length > 0) f.name = newName;
+
+    let newCategory = document.getElementById("editCategory").value;
+    if (newCategory) f.category = newCategory;
+
+    let fileInput = document.getElementById("editFile");
+    if (fileInput.files && fileInput.files.length > 0) {
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        f.image = e.target.result;
+        save();
+        rerender();
+        document.getElementById("editPanel").classList.add("hidden");
+        fileInput.value = "";
+        alert("Změny uloženy!");
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else {
+      save();
+      rerender();
+      document.getElementById("editPanel").classList.add("hidden");
+      alert("Změny uloženy!");
+    }
+  }
+
+  // --- AKTUALIZOVANÁ FUNKCE PRO SMAZÁNÍ KOMENTÁŘE ---
+  function delComm(fId, commId) {
+    let f = foods.find(x => x.id == fId);
+    if (!f || !f.comments) return;
+    
+    let commentIndex = f.comments.findIndex(c => c.id == commId);
+    if (commentIndex === -1) return;
+    
+    let commToDelete = f.comments[commentIndex];
+    
+    // Pokud je to hlavní komentář, smaže i odpovědi na něj
+    if (commToDelete && !commToDelete.parentId) {
+      f.comments = f.comments.filter(c => c.parentId !== commToDelete.id);
+    }
+    
+    // Odstraní komentář
+    f.comments = f.comments.filter(c => c.id !== commId);
+    save();
+    
+    // Rerender bez posunutí na začátek - prostě aktualizuje
+    rerender();
+  }
+  
+  // --- SHOW/HIDE HESLO - POUZE KLIKNUTÍм NA IKONKU ---
+  function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const wrapper = input.parentElement;
+    const icon = wrapper.querySelector('.password-toggle-icon i');
+    
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.remove('fa-regular');
+      icon.classList.add('fa-solid');
+    } else {
+      input.type = 'password';
+      icon.classList.remove('fa-solid');
+      icon.classList.add('fa-regular');
+    }
+  }
+  
+    function rerender() {
+    const scrollPositions = {};
+    document.querySelectorAll('.comment-list').forEach(list => {
+      const card = list.closest('.card');
+      if (card) {
+        const foodId = card.getAttribute('data-food-id');
+        scrollPositions[foodId] = list.scrollTop;
+      }
+    });
+
+    if (currentCategory === "leaderboard") {
+      showLeaderboard();
+    } else {
+      render(currentCategory);
+    }
+
+    setTimeout(() => {
+      document.querySelectorAll('.comment-list').forEach(list => {
+        const card = list.closest('.card');
+        if (card) {
+          const foodId = card.getAttribute('data-food-id');
+          if (scrollPositions[foodId] !== undefined) {
+            list.scrollTop = scrollPositions[foodId];
+          }
+        }
+      });
+    }, 0);
+  }
+</script>
+
+</body>
+</html>
