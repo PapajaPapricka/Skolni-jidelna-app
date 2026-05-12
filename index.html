@@ -1483,5 +1483,30 @@ document.addEventListener("keydown", function(event) {
   }
 </script>
 
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
+    authDomain: "jidelna-projekt.firebaseapp.com",
+    projectId: "jidelna-projekt",
+    storageBucket: "jidelna-projekt.firebasestorage.app",
+	https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app/
+    messagingSenderId: "710901621597",
+    appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
+    measurementId: "G-XJ6B1QFTG6"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+	
 </body>
 </html>
