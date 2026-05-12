@@ -558,7 +558,7 @@
 <!-- PŘIHLAŠOVACÍ STRÁNKA -->
 <div id="loginPage">
   <h1>🍽️ Jídelna App</h1>
-	<input id="loginUser" placeholder="Email"><br>
+<input id="loginUser" placeholder="Jméno"><br>
   <div class="password-input-wrapper">
     <input id="loginPass" type="password" placeholder="Heslo">
     <span class="password-toggle-icon" onclick="togglePasswordVisibility('loginPass')">
@@ -1485,8 +1485,7 @@ document.addEventListener("keydown", function(event) {
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
@@ -1500,93 +1499,66 @@ document.addEventListener("keydown", function(event) {
   };
 
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
   const db = getDatabase(app);
+  const SECRET_KEY = "TVŮJ_TAJNÝ_KLÍČ"; // ← NAHRAĎ TÍMTO!
 
-  // Monitoruj přihlášení
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      localStorage.setItem("currentUser", user.email);
-      localStorage.setItem("userId", user.uid);
-      loadFromFirebase();
-      startApp();
-    } else {
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("userId");
-      app.classList.add("hidden");
-      loginPage.classList.remove("hidden");
-    }
-  });
-
-  // Přepis registrace
-  window.register = async function() {
-    let email = loginUser.value.trim();
-    let p = loginPass.value.trim();
-    let pc = document.getElementById("loginPassConfirm").value.trim();
-
-    if (email.length < 5 || p.length < 3) return alert("Email a heslo min 3 znaky");
-    if (p !== pc) return alert("Hesla se neshodují!");
-
+  // Inicializuj secret při startu
+  async function initSecret() {
     try {
-      await createUserWithEmailAndPassword(auth, email, p);
-      alert("Registrace OK! Přihlášení...");
-      loginPass.value = "";
-      document.getElementById("loginPassConfirm").value = "";
+      const snapshot = await get(ref(db, 'secret'));
+      if (!snapshot.exists()) {
+        await set(ref(db, 'secret'), SECRET_KEY);
+      }
     } catch (error) {
-      alert("Chyba: " + error.message);
+      console.log("Secret init skipped");
     }
-  };
+  }
 
-  // Přepis přihlášení
-  window.login = async function() {
-    let email = loginUser.value.trim();
-    let p = loginPass.value.trim();
+  initSecret();
 
+  // Načti data z Firebase
+  function loadFromFirebase() {
     try {
-      await signInWithEmailAndPassword(auth, email, p);
-      loginUser.value = "";
-      loginPass.value = "";
+      onValue(ref(db, 'foods'), (snapshot) => {
+        if (snapshot.exists()) {
+          foods = snapshot.val();
+          localStorage.setItem("foods", JSON.stringify(foods));
+          if (typeof rerender === 'function') rerender();
+        }
+      });
+
+      onValue(ref(db, 'users'), (snapshot) => {
+        if (snapshot.exists()) {
+          users = snapshot.val();
+          localStorage.setItem("users", JSON.stringify(users));
+        }
+      });
     } catch (error) {
-      alert("Špatné údaje: " + error.message);
+      console.log("Firebase načítání:", error);
     }
-  };
+  }
 
-  // Přepis odhlášení
-  window.logout = async function() {
-    await signOut(auth);
-  };
-
-  // Uložení do Firebase
+  // Uloži do Firebase
   async function saveToFirebase() {
     try {
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        await set(ref(db, `data/${userId}/foods`), foods);
-      }
+      await set(ref(db, 'foods'), foods);
+      await set(ref(db, 'users'), users);
     } catch (error) {
       console.error("Firebase chyba:", error);
     }
   }
 
-  // Načtení z Firebase
-  function loadFromFirebase() {
-    const userId = localStorage.getItem("userId");
-    if (!userId) return;
-
-    onValue(ref(db, `data/${userId}/foods`), (snapshot) => {
-      if (snapshot.exists()) {
-        foods = snapshot.val();
-        localStorage.setItem("foods", JSON.stringify(foods));
-        rerender();
-      }
-    });
-  }
-
   // Přepis save()
   window.save = function() {
+    localStorage.setItem("users", JSON.stringify(users));
     localStorage.setItem("foods", JSON.stringify(foods));
     saveToFirebase();
   };
+
+  // Načti data při startu
+  setTimeout(() => {
+    loadFromFirebase();
+  }, 500);
 </script>
 	
 </body>
