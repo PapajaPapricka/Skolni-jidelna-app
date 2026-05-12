@@ -701,7 +701,38 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
+    authDomain: "jidelna-projekt.firebaseapp.com",
+    databaseURL: "https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "jidelna-projekt",
+    storageBucket: "jidelna-projekt.firebasestorage.app",
+    messagingSenderId: "710901621597",
+    appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
+    measurementId: "G-XJ6B1QFTG6"
+  };
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+  const SECRET_KEY = "XUw7@781"; // ← NAHRAĎ TÍMTO!
+
+  // Inicializuj secret při startu
+  async function initSecret() {
+    try {
+      const snapshot = await get(ref(db, 'secret'));
+      if (!snapshot.exists()) {
+        await set(ref(db, 'secret'), SECRET_KEY);
+      }
+    } catch (error) {
+      console.log("Secret init skipped");
+    }
+  }
+
+  initSecret();
 
 // --- Firebase Realtime Sync ---
 
@@ -1414,41 +1445,9 @@ async function resetVotes() {
     await set(ref(db, 'foods/' + f.id), f);
   }
 }
-</script>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
-    authDomain: "jidelna-projekt.firebaseapp.com",
-    databaseURL: "https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "jidelna-projekt",
-    storageBucket: "jidelna-projekt.firebasestorage.app",
-    messagingSenderId: "710901621597",
-    appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
-    measurementId: "G-XJ6B1QFTG6"
-  };
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getDatabase(firebaseApp);
-  const SECRET_KEY = "XUw7@781"; // ← NAHRAĎ TÍMTO!
-
-  // Inicializuj secret při startu
-  async function initSecret() {
-    try {
-      const snapshot = await get(ref(db, 'secret'));
-      if (!snapshot.exists()) {
-        await set(ref(db, 'secret'), SECRET_KEY);
-      }
-    } catch (error) {
-      console.log("Secret init skipped");
-    }
-  }
-
-  initSecret();
-
+	
 </script>
 	
 </body>
