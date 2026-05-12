@@ -1519,20 +1519,36 @@ document.addEventListener("keydown", function(event) {
   // Načti data z Firebase
   function loadFromFirebase() {
     try {
-      onValue(ref(db, 'foods'), (snapshot) => {
-        if (snapshot.exists()) {
-          foods = snapshot.val();
-          localStorage.setItem("foods", JSON.stringify(foods));
-          if (typeof rerender === 'function') rerender();
-        }
-      });
+onValue(ref(db, 'foods'), (snapshot) => {
+  if (snapshot.exists()) {
+    foods = Object.values(snapshot.val() || {});
 
-      onValue(ref(db, 'users'), (snapshot) => {
-        if (snapshot.exists()) {
-          users = snapshot.val();
-          localStorage.setItem("users", JSON.stringify(users));
-        }
-      });
+    // Oprava starých dat
+    foods.forEach(f => {
+      if (!f.comments) f.comments = [];
+      if (!f.ratings) f.ratings = [];
+      if (!f.voters) f.voters = [];
+      if (!f.favorites) f.favorites = [];
+    });
+
+    localStorage.setItem("foods", JSON.stringify(foods));
+
+    if (typeof rerender === 'function') {
+      rerender();
+    }
+  } else {
+    foods = [];
+  }
+});
+
+onValue(ref(db, 'users'), (snapshot) => {
+  if (snapshot.exists()) {
+    users = Object.values(snapshot.val() || {});
+    localStorage.setItem("users", JSON.stringify(users));
+  } else {
+    users = [];
+  }
+});
     } catch (error) {
       console.log("Firebase načítání:", error);
     }
