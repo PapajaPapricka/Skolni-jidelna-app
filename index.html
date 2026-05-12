@@ -1007,10 +1007,25 @@ let repliesHtml = replies.map(r => {
 // --- RATE / COMMENT / FOOD MGMT ---
 function rate(id, val) {
   let f = foods.find(x => x.id == id);
+
+  if (!f) return;
+
   let user = localStorage.getItem("currentUser");
-  if (!isAdmin() && f.voters.includes(user)) return;
-  f.ratings.push({ user: user, val: val });
+
+  if (!f.voters) f.voters = [];
+  if (!f.ratings) f.ratings = [];
+
+  if (!isAdmin() && f.voters.includes(user)) {
+    return;
+  }
+
+  f.ratings.push({
+    user: user,
+    val: val
+  });
+
   f.voters.push(user);
+
   save();
   rerender();
 }
@@ -1139,18 +1154,26 @@ function cancelReply(foodId) {
 
 
 
-  function toggleFavorite(id) {
-    let f = foods.find(x => x.id == id);
-    let user = localStorage.getItem("currentUser");
-    if (!f.favorites) f.favorites = [];
-    if (f.favorites.includes(user)) {
-      f.favorites = f.favorites.filter(u => u !== user);
-    } else {
-      f.favorites.push(user);
-    }
-    save();
-    rerender();
+function toggleFavorite(id) {
+  let f = foods.find(x => x.id == id);
+
+  if (!f) return;
+
+  let user = localStorage.getItem("currentUser");
+
+  if (!f.favorites) {
+    f.favorites = [];
   }
+
+  if (f.favorites.includes(user)) {
+    f.favorites = f.favorites.filter(u => u !== user);
+  } else {
+    f.favorites.push(user);
+  }
+
+  save();
+  rerender();
+}
 
   function openEdit(id) {
     let f = foods.find(x => x.id == id);
@@ -1555,14 +1578,29 @@ onValue(ref(db, 'users'), (snapshot) => {
   }
 
   // Uloži do Firebase
-  async function saveToFirebase() {
-    try {
-      await set(ref(db, 'foods'), foods);
-      await set(ref(db, 'users'), users);
-    } catch (error) {
-      console.error("Firebase chyba:", error);
-    }
+async function saveToFirebase() {
+  try {
+    // Uloží foods jako objekt podle ID
+    const foodsObject = {};
+
+    foods.forEach(food => {
+      foodsObject[food.id] = food;
+    });
+
+    // Uloží users jako objekt podle jména
+    const usersObject = {};
+
+    users.forEach(user => {
+      usersObject[user.name] = user;
+    });
+
+    await set(ref(db, 'foods'), foodsObject);
+    await set(ref(db, 'users'), usersObject);
+
+  } catch (error) {
+    console.error("Firebase chyba:", error);
   }
+}
 
   // Přepis save()
   window.save = function() {
