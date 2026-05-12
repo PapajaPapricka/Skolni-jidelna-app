@@ -136,7 +136,7 @@
 
     #foods {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  		grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
       gap: 20px;
       padding: 20px 0;
     }
@@ -520,6 +520,7 @@
       position: relative;
       display: inline-block;
       margin: 4px;
+	  width: 186px;
     }
 
     .password-input-wrapper input {
@@ -702,8 +703,8 @@
 
 <script>
   // --- GLOBÁLNÍ PROMĚNNÉ ---
-  let users = JSON.parse(localStorage.getItem("users")) || [];
-  let foods = JSON.parse(localStorage.getItem("foods")) || [];
+  let users = [];
+let foods = [];
   let currentCategory = "all";
 
   function save() {
@@ -812,8 +813,15 @@
     render("all");
   }
 
-  if (localStorage.getItem("currentUser")) startApp();
+// Načti data při startu
+loadFromFirebase();
 
+setTimeout(() => {
+  if (localStorage.getItem("currentUser")) {
+    startApp();
+  }
+}, 1200);
+	
   function isAdmin() {
     return localStorage.getItem("role") === "admin";
   }
@@ -833,33 +841,6 @@
     newName.value = localStorage.getItem("currentUser");
   }
 
-  // --- PROFIL ---
-  async function updateProfile() {
-    let oldName = localStorage.getItem("currentUser");
-    let user = users.find(u => u.name === oldName);
-    let newN = newName.value.trim();
-
-    if (newN.length > 2 && newN !== oldName) {
-      if (users.find(u => u.name === newN)) return alert("Jméno už existuje");
-      foods.forEach(f => {
-        if (f.comments) f.comments.forEach(c => { if (c.user === oldName) c.user = newN; });
-        if (f.voters) f.voters = f.voters.map(v => v === oldName ? newN : v);
-        if (f.ratings) f.ratings.forEach(r => { if (r.user === oldName) r.user = newN; });
-        if (f.favorites) f.favorites = f.favorites.map(fav => fav === oldName ? newN : fav);
-      });
-      user.name = newN;
-      localStorage.setItem("currentUser", newN);
-    }
-
-    if (newPass.value.length > 2) {
-      user.pass = await hashPassword(newPass.value);
-    }
-
-    save();
-    profilePanel.classList.add("hidden");
-    startApp();
-    alert("Uloženo");
-  }
 
   // --- ADMIN PANEL ---
   function renderUsers() {
@@ -1174,15 +1155,6 @@ function toggleFavorite(id) {
   rerender();
 }
 
-  function openEdit(id) {
-    let f = foods.find(x => x.id == id);
-    document.getElementById("editId").value = f.id;
-    document.getElementById("editName").value = f.name;
-    document.getElementById("editPanel").classList.remove("hidden");
-    document.getElementById("adminPanel").classList.add("hidden");
-    document.getElementById("profilePanel").classList.add("hidden");
-  }
-
   function resetVotes() {
     let id = document.getElementById("editId").value;
     let f = foods.find(x => x.id == id);
@@ -1283,34 +1255,6 @@ function goToFood(foodId, commentId) {
         }
     }, 450);
 }
-
-  async function saveEdit() {
-    let id = document.getElementById("editId").value;
-    let f = foods.find(x => x.id == id);
-    if (!f) return alert("Chyba: jídlo nenalezeno");
-
-    let newName = document.getElementById("editName").value.trim();
-    if (newName.length > 0) f.name = newName;
-
-    let fileInput = document.getElementById("editFile");
-    if (fileInput.files && fileInput.files.length > 0) {
-      let reader = new FileReader();
-      reader.onload = function(e) {
-        f.image = e.target.result;
-        save();
-        rerender();
-        document.getElementById("editPanel").classList.add("hidden");
-        fileInput.value = "";
-        alert("Změny uloženy!");
-      };
-      reader.readAsDataURL(fileInput.files[0]);
-    } else {
-      save();
-      rerender();
-      document.getElementById("editPanel").classList.add("hidden");
-      alert("Změny uloženy!");
-    }
-  }
 
   // --- MODAL PRO OBRÁZKY ---
   function openImage(imgSrc) {
@@ -1557,8 +1501,8 @@ if (!Array.isArray(f.favorites)) {
 
     localStorage.setItem("foods", JSON.stringify(foods));
 
-	  if (document.getElementById("app") && !document.getElementById("app").classList.contains("hidden")) {
-  render(currentCategory);
+if (!document.getElementById("app").classList.contains("hidden")) {
+  rerender();
 }
   } else {
     foods = [];
@@ -1581,22 +1525,37 @@ onValue(ref(db, 'users'), (snapshot) => {
   // Uloži do Firebase
 async function saveToFirebase() {
   try {
-    // Uloží foods jako objekt podle ID
-    const foodsObject = {};
 
+    const foodsObject = {};
     foods.forEach(food => {
       foodsObject[food.id] = food;
     });
 
-    // Uloží users jako objekt podle jména
     const usersObject = {};
-
     users.forEach(user => {
       usersObject[user.name] = user;
     });
 
-    await set(ref(db, 'foods'), foodsObject);
-    await set(ref(db, 'users'), usersObject);
+    // nejdřív stáhne aktuální data
+    const foodsSnap = await get(ref(db, 'foods'));
+    const usersSnap = await get(ref(db, 'users'));
+
+    const currentFoods = foodsSnap.exists() ? foodsSnap.val() : {};
+    const currentUsers = usersSnap.exists() ? usersSnap.val() : {};
+
+    // merge místo přepisu
+    const mergedFoods = {
+      ...currentFoods,
+      ...foodsObject
+    };
+
+    const mergedUsers = {
+      ...currentUsers,
+      ...usersObject
+    };
+
+    await set(ref(db, 'foods'), mergedFoods);
+    await set(ref(db, 'users'), mergedUsers);
 
   } catch (error) {
     console.error("Firebase chyba:", error);
@@ -1614,11 +1573,9 @@ window.save = function() {
 
   saveTimeout = setTimeout(() => {
     saveToFirebase();
-  }, 300);
+  }, 800);
 };
 
-  // Načti data při startu
-loadFromFirebase();
 </script>
 	
 </body>
