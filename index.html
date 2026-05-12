@@ -725,10 +725,6 @@ function initFirebaseSync() {
 initFirebaseSync();
 	
   // --- GLOBÁLNÍ PROMĚNNÉ ---
-  let users = [];
-let foods = [];
-  let currentCategory = "all";
-
   function resetSearch() {
     const sInput = document.getElementById("searchInput");
     const sMode = document.getElementById("searchMode");
@@ -745,13 +741,12 @@ let foods = [];
   }
 
   // Inicializace admina při startu
-  async function initAdmin() {
-    if (!users.find(u => u.name === "admin")) {
-      const hashedPass = await hashPassword("admin123");
-      users.push({ name: "admin", pass: hashedPass, role: "admin" });
-      save();
-    }
+async function initAdmin() {
+  if (!users.find(u => u.name === "admin")) {
+    const hashedPass = await hashPassword("admin123");
+    await set(ref(db, 'users/admin'), { name: "admin", pass: hashedPass, role: "admin" });
   }
+}
 
   initAdmin();
 
@@ -829,9 +824,6 @@ await set(ref(db, 'users/' + u), { name: u, pass: hashedPass, role: "user" });
     render("all");
   }
 
-// Načti data při startu
-loadFromFirebase();
-
 	
   function isAdmin() {
     return localStorage.getItem("role") === "admin";
@@ -876,24 +868,24 @@ loadFromFirebase();
       let user = users.find(u => u.name === n);
       if (user) {
         user.pass = await hashPassword("123456");
-        save();
+        await set(ref(db, 'users/' + user.name), user);
         alert("Heslo resetováno na: 123456");
       }
     }
   }
 
-  function deleteUser(n) {
+ async function deleteUser(n) {
     if (confirm("Opravdu smazat uživatele " + n + "?")) {
-      users = users.filter(u => u.name !== n);
-      foods.forEach(f => {
-        if (f.comments) f.comments = f.comments.filter(c => c.user !== n);
-        if (f.voters) f.voters = f.voters.filter(v => v !== n);
-        if (f.ratings) f.ratings = f.ratings.filter(r => r.user !== n);
-        if (f.favorites) f.favorites = f.favorites.filter(fav => fav !== n);
-      });
-      save();
-      renderUsers();
-      render(currentCategory);
+await set(ref(db, 'users/' + n), null);
+// Poté případné úpravy v foods (komentáře pryč, apod.):
+for (const f of foods) {
+  // smaž komentáře daného uživatele:
+  if (f.comments) f.comments = f.comments.filter(c => c.user !== n);
+  if (f.voters) f.voters = f.voters.filter(v => v !== n);
+  if (f.ratings) f.ratings = f.ratings.filter(r => r.user !== n);
+  if (f.favorites) f.favorites = f.favorites.filter(fav => fav !== n);
+  await set(ref(db, 'foods/' + f.id), f);
+}
     }
   }
 
@@ -1132,8 +1124,7 @@ async function toggleFavorite(id) {
     if (confirm("Opravdu chceš vynulovat hodnocení?")) {
       f.ratings = [];
       f.voters = [];
-      save();
-      rerender();
+await set(ref(db, 'foods/' + f.id), f);
     }
   }
 
@@ -1298,9 +1289,9 @@ document.addEventListener("keydown", function(event) {
       document.getElementById("newPassConfirm").value = "";
       document.getElementById("newPass").type = "password";
       document.getElementById("newPassConfirm").type = "password";
+		await set(ref(db, 'users/' + user.name), user);
     }
 
-    save();
     profilePanel.classList.add("hidden");
     startApp();
     alert("Uloženo");
@@ -1318,36 +1309,34 @@ document.addEventListener("keydown", function(event) {
   }
 
   // --- AKTUALIZOVANÁ FUNKCE NA ULOŽENÍ EDITACE ---
-  async function saveEdit() {
-    let id = document.getElementById("editId").value;
-    let f = foods.find(x => x.id == id);
-    if (!f) return alert("Chyba: jídlo nenalezeno");
+async function saveEdit() {
+  let id = document.getElementById("editId").value;
+  let f = foods.find(x => x.id == id);
+  if (!f) return alert("Chyba: jídlo nenalezeno");
 
-    let newName = document.getElementById("editName").value.trim();
-    if (newName.length > 0) f.name = newName;
+  let newName = document.getElementById("editName").value.trim();
+  if (newName.length > 0) f.name = newName;
 
-    let newCategory = document.getElementById("editCategory").value;
-    if (newCategory) f.category = newCategory;
+  let newCategory = document.getElementById("editCategory").value;
+  if (newCategory) f.category = newCategory;
 
-    let fileInput = document.getElementById("editFile");
-    if (fileInput.files && fileInput.files.length > 0) {
-      let reader = new FileReader();
-      reader.onload = function(e) {
-        f.image = e.target.result;
-        save();
-        rerender();
-        document.getElementById("editPanel").classList.add("hidden");
-        fileInput.value = "";
-        alert("Změny uloženy!");
-      };
-      reader.readAsDataURL(fileInput.files[0]);
-    } else {
-      save();
-      rerender();
+  let fileInput = document.getElementById("editFile");
+  if (fileInput.files && fileInput.files.length > 0) {
+    let reader = new FileReader();
+    reader.onload = async function(e) {
+      f.image = e.target.result;
+      await set(ref(db, 'foods/' + f.id), f);
       document.getElementById("editPanel").classList.add("hidden");
+      fileInput.value = "";
       alert("Změny uloženy!");
-    }
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    await set(ref(db, 'foods/' + f.id), f);
+    document.getElementById("editPanel").classList.add("hidden");
+    alert("Změny uloženy!");
   }
+}
 
   // --- AKTUALIZOVANÁ FUNKCE PRO SMAZÁNÍ KOMENTÁŘE ---
   function delComm(fId, commId) {
@@ -1363,13 +1352,10 @@ document.addEventListener("keydown", function(event) {
     if (commToDelete && !commToDelete.parentId) {
       f.comments = f.comments.filter(c => c.parentId !== commToDelete.id);
     }
-    
+
     // Odstraní komentář
     f.comments = f.comments.filter(c => c.id !== commId);
-    save();
-    
-    // Rerender bez posunutí na začátek - prostě aktualizuje
-    rerender();
+await set(ref(db, 'foods/' + f.id), f);
   }
   
   // --- SHOW/HIDE HESLO - POUZE KLIKNUTÍм NA IKONKU ---
@@ -1417,6 +1403,17 @@ document.addEventListener("keydown", function(event) {
       });
     }, 0);
   }
+
+async function resetVotes() {
+  let id = document.getElementById("editId").value;
+  let f = foods.find(x => x.id == id);
+  if (!f) return;
+  if (confirm("Opravdu chceš vynulovat hodnocení?")) {
+    f.ratings = [];
+    f.voters = [];
+    await set(ref(db, 'foods/' + f.id), f);
+  }
+}
 </script>
 
 <script type="module">
@@ -1452,23 +1449,6 @@ const db = getDatabase(firebaseApp);
 
   initSecret();
 
-  // Přepis save()
-function saveLocal() {
-  localStorage.setItem("users", JSON.stringify(users));
-  localStorage.setItem("foods", JSON.stringify(foods));
-}
-
-window.save = function () {
-  saveLocal();
-
-  clearTimeout(saveTimeout);
-
-  saveTimeout = setTimeout(() => {
-    saveToFirebase();
-  }, 800);
-};
-
-window.loadFromFirebase = loadFromFirebase;
 </script>
 	
 </body>
