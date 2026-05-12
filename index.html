@@ -1492,16 +1492,16 @@ document.addEventListener("keydown", function(event) {
 
   // Your web app's Firebase configuration
   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
-    authDomain: "jidelna-projekt.firebaseapp.com",
-    projectId: "jidelna-projekt",
-    storageBucket: "jidelna-projekt.firebasestorage.app",
-	https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app/
-    messagingSenderId: "710901621597",
-    appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
-    measurementId: "G-XJ6B1QFTG6"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
+  authDomain: "jidelna-projekt.firebaseapp.com",
+  databaseURL: "https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jidelna-projekt",
+  storageBucket: "jidelna-projekt.firebasestorage.app",
+  messagingSenderId: "710901621597",
+  appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
+  measurementId: "G-XJ6B1QFTG6"
+};
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
