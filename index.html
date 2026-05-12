@@ -816,11 +816,6 @@ let foods = [];
 // Načti data při startu
 loadFromFirebase();
 
-setTimeout(() => {
-  if (localStorage.getItem("currentUser")) {
-    startApp();
-  }
-}, 1200);
 	
   function isAdmin() {
     return localStorage.getItem("role") === "admin";
@@ -1563,11 +1558,13 @@ async function saveToFirebase() {
 }
 
   // Přepis save()
-let saveTimeout;
-
-window.save = function() {
+function saveLocal() {
   localStorage.setItem("users", JSON.stringify(users));
   localStorage.setItem("foods", JSON.stringify(foods));
+}
+
+window.save = function () {
+  saveLocal();
 
   clearTimeout(saveTimeout);
 
@@ -1576,6 +1573,8 @@ window.save = function() {
   }, 800);
 };
 
+window.loadFromFirebase = loadFromFirebase;
+loadFromFirebase();
 </script>
 	
 </body>
