@@ -8,7 +8,6 @@
   <style>
     * {
       box-sizing: border-box;
-      transition: all 0.2s ease;
     }
 
     body {
@@ -1521,8 +1520,8 @@ document.addEventListener("keydown", function(event) {
     measurementId: "G-XJ6B1QFTG6"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
   const SECRET_KEY = "XUw7@781"; // ← NAHRAĎ TÍMTO!
 
   // Inicializuj secret při startu
@@ -1548,17 +1547,19 @@ onValue(ref(db, 'foods'), (snapshot) => {
 
     // Oprava starých dat
     foods.forEach(f => {
-      if (!f.comments) f.comments = [];
-      if (!f.ratings) f.ratings = [];
-      if (!f.voters) f.voters = [];
-      if (!f.favorites) f.favorites = [];
+if (!Array.isArray(f.comments)) f.comments = [];
+if (!Array.isArray(f.ratings)) f.ratings = [];
+if (!Array.isArray(f.voters)) f.voters = [];
+if (!Array.isArray(f.favorites)) {
+  f.favorites = [];
+}
     });
 
     localStorage.setItem("foods", JSON.stringify(foods));
 
-    if (typeof rerender === 'function') {
-      rerender();
-    }
+	  if (document.getElementById("app") && !document.getElementById("app").classList.contains("hidden")) {
+  render(currentCategory);
+}
   } else {
     foods = [];
   }
@@ -1603,16 +1604,21 @@ async function saveToFirebase() {
 }
 
   // Přepis save()
-  window.save = function() {
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("foods", JSON.stringify(foods));
+let saveTimeout;
+
+window.save = function() {
+  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.setItem("foods", JSON.stringify(foods));
+
+  clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(() => {
     saveToFirebase();
-  };
+  }, 300);
+};
 
   // Načti data při startu
-  setTimeout(() => {
-    loadFromFirebase();
-  }, 500);
+loadFromFirebase();
 </script>
 	
 </body>
