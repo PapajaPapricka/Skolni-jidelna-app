@@ -701,77 +701,64 @@
   </div>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+ <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
-    authDomain: "jidelna-projekt.firebaseapp.com",
-    databaseURL: "https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "jidelna-projekt",
-    storageBucket: "jidelna-projekt.firebasestorage.app",
-    messagingSenderId: "710901621597",
-    appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
-    measurementId: "G-XJ6B1QFTG6"
-  };
+// Firebase konfigurace
+const firebaseConfig = {
+  apiKey: "AIzaSyDUgsmNXR8CEIzbc7z_oU9BBnkEw1vokpI",
+  authDomain: "jidelna-projekt.firebaseapp.com",
+  databaseURL: "https://jidelna-projekt-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jidelna-projekt",
+  storageBucket: "jidelna-projekt.firebasestorage.app",
+  messagingSenderId: "710901621597",
+  appId: "1:710901621597:web:cb94ba2f38e315ea6bfeb4",
+  measurementId: "G-XJ6B1QFTG6"
+};
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
-  const SECRET_KEY = "XUw7@781"; // ← NAHRAĎ TÍMTO!
+const SECRET_KEY = "XUw7@781";
 
-  // Inicializuj secret při startu
-  async function initSecret() {
-    try {
-      const snapshot = await get(ref(db, 'secret'));
-      if (!snapshot.exists()) {
-        await set(ref(db, 'secret'), SECRET_KEY);
-      }
-    } catch (error) {
-      console.log("Secret init skipped");
+// Inicializace "tajného klíče" (volitelné)
+async function initSecret() {
+  try {
+    const snapshot = await get(ref(db, 'secret'));
+    if (!snapshot.exists()) {
+      await set(ref(db, 'secret'), SECRET_KEY);
     }
+  } catch (error) {
+    console.log("Secret init skipped");
   }
+}
 
-  initSecret();
-
-// --- Firebase Realtime Sync ---
-
+// Proměnné pro data
 let users = [];
 let foods = [];
 let currentCategory = "all";
 
-// POSLOUCHEJ automaticky změny v DB a aktualizuj vše živě:
+// Synchronizace dat v reálném čase
 function initFirebaseSync() {
-  // Jídla
   onValue(ref(db, 'foods'), (snapshot) => {
     foods = snapshot.exists() ? Object.values(snapshot.val() || {}) : [];
-    rerender(); // Aktualizace UI
+    rerender();
   });
-  // Uživatelé
   onValue(ref(db, 'users'), (snapshot) => {
     users = snapshot.exists() ? Object.values(snapshot.val() || {}) : [];
-    renderUsers(); // pro admin panel
+    renderUsers();
   });
 }
-initFirebaseSync();
-	
-  // --- GLOBÁLNÍ PROMĚNNÉ ---
-  function resetSearch() {
-    const sInput = document.getElementById("searchInput");
-    const sMode = document.getElementById("searchMode");
-    if (sInput) sInput.value = "";
-    if (sMode) sMode.value = "foods";
-  }
 
-  // --- BEZPEČNOSTNÍ FUNKCE (SHA-256) ---
-  async function hashPassword(password) {
-    const msgUint8 = new TextEncoder().encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
+// SHA-256 hashování hesla
+async function hashPassword(password) {
+  const msgUint8 = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-  // Inicializace admina při startu
+// Při startu vytvoř admina (pokud není)
 async function initAdmin() {
   if (!users.find(u => u.name === "admin")) {
     const hashedPass = await hashPassword("admin123");
@@ -779,246 +766,239 @@ async function initAdmin() {
   }
 }
 
-  initAdmin();
+// Přihlášení a registrace
+async function register() {
+  let u = loginUser.value.trim();
+  let p = loginPass.value.trim();
+  let pcField = document.getElementById("loginPassConfirm");
 
-  // --- NAVIGACE A UI ---
-  function updateNavHighlight(cat) {
-    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-    let activeBtn = document.getElementById('btn-' + cat);
-    if (activeBtn) activeBtn.classList.add('active');
-  }
+  if (!pcField) return alert("Chyba v HTML!");
+  let pc = pcField.value.trim();
+  if (u.length < 3 || p.length < 3) return alert("Min 3 znaky pro jméno i heslo");
+  if (p !== pc) return alert("Hesla se neshodují!");
+  if (users.find(x => x.name === u)) return alert("Uživatel už existuje");
 
-  // --- AUTH SYSTÉM (LOGIN / REGISTER / LOGOUT) ---
-  async function register() {
-    let u = loginUser.value.trim();
-    let p = loginPass.value.trim();
-    let pcField = document.getElementById("loginPassConfirm");
+  const hashedPass = await hashPassword(p);
+  await set(ref(db, 'users/' + u), { name: u, pass: hashedPass, role: "user" });
 
-    if (!pcField) return alert("Chyba v HTML!");
-    let pc = pcField.value.trim();
-    if (u.length < 3 || p.length < 3) return alert("Min 3 znaky pro jméno i heslo");
-    if (p !== pc) return alert("Hesla se neshodují!");
-    if (users.find(x => x.name === u)) return alert("Uživatel už existuje");
-
-    const hashedPass = await hashPassword(p);
-await set(ref(db, 'users/' + u), { name: u, pass: hashedPass, role: "user" });
-
-    alert("Registrace proběhla v pořádku! Teď se můžeš přihlásit.");
-    loginPass.value = "";
-    pcField.value = "";
-    showLogin();
-    loginPass.focus();
-  }
-
-  async function login() {
-    let u = loginUser.value.trim(), p = loginPass.value.trim();
-    const hashedPass = await hashPassword(p);
-
-    let user = users.find(x => x.name === u && x.pass === hashedPass);
-    if (!user) return alert("Špatné údaje");
-
-    localStorage.setItem("currentUser", u);
-    localStorage.setItem("role", user.role);
-    loginUser.value = "";
-    loginPass.value = "";
-    startApp();
-  }
-
-  function logout() {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("role");
-    app.classList.add("hidden");
-    adminPanel.classList.add("hidden");
-    profilePanel.classList.add("hidden");
-    if (typeof editPanel !== 'undefined') editPanel.classList.add("hidden");
-    loginPage.classList.remove("hidden");
-
-    loginUser.value = "";
-    loginPass.value = "";
-    if (document.getElementById("loginPassConfirm")) {
-      document.getElementById("loginPassConfirm").value = "";
-    }
-  }
-
-  // --- APLIKAČNÍ LOGIKA ---
-  function startApp() {
-    loginPage.classList.add("hidden");
-    app.classList.remove("hidden");
-    userInfo.innerText = "👤 " + localStorage.getItem("currentUser");
-    if (isAdmin()) {
-      adminBtn.classList.remove("hidden");
-      renderUsers();
-    } else {
-      adminBtn.classList.add("hidden");
-      adminPanel.classList.add("hidden");
-    }
-    render("all");
-  }
-
-	
-  function isAdmin() {
-    return localStorage.getItem("role") === "admin";
-  }
-
-  function toggleAdmin() {
-    if (isAdmin()) {
-      adminPanel.classList.toggle("hidden");
-      editPanel.classList.add("hidden");
-      profilePanel.classList.add("hidden");
-    }
-  }
-
-  function toggleProfile() {
-    profilePanel.classList.toggle("hidden");
-    adminPanel.classList.add("hidden");
-    editPanel.classList.add("hidden");
-    newName.value = localStorage.getItem("currentUser");
-  }
-
-
-  // --- ADMIN PANEL ---
-  function renderUsers() {
-    let list = document.getElementById("userList");
-    list.innerHTML = "";
-    users.forEach(u => {
-      if (u.name !== "admin") {
-        list.innerHTML += `
-          <div class="userRow">
-            <span>${u.name}</span>
-            <div style="display:flex; gap:5px">
-              <button class="reset-btn" onclick="resetUserPass('${u.name}')">Reset</button>
-              <button class="delete-btn" onclick="deleteUser('${u.name}')">Smazat</button>
-            </div>
-          </div>`;
-      }
-    });
-  }
-
-  async function resetUserPass(n) {
-    if (confirm("Resetovat heslo uživateli " + n + " na '123456'?")) {
-      let user = users.find(u => u.name === n);
-      if (user) {
-        user.pass = await hashPassword("123456");
-        await set(ref(db, 'users/' + user.name), user);
-        alert("Heslo resetováno na: 123456");
-      }
-    }
-  }
-
- async function deleteUser(n) {
-    if (confirm("Opravdu smazat uživatele " + n + "?")) {
-await set(ref(db, 'users/' + n), null);
-// Poté případné úpravy v foods (komentáře pryč, apod.):
-for (const f of foods) {
-  // smaž komentáře daného uživatele:
-  if (f.comments) f.comments = f.comments.filter(c => c.user !== n);
-  if (f.voters) f.voters = f.voters.filter(v => v !== n);
-  if (f.ratings) f.ratings = f.ratings.filter(r => r.user !== n);
-  if (f.favorites) f.favorites = f.favorites.filter(fav => fav !== n);
-  await set(ref(db, 'foods/' + f.id), f);
+  alert("Registrace proběhla v pořádku! Teď se můžeš přihlásit.");
+  loginPass.value = "";
+  pcField.value = "";
+  showLogin();
+  loginPass.focus();
 }
+
+async function login() {
+  let u = loginUser.value.trim(), p = loginPass.value.trim();
+  const hashedPass = await hashPassword(p);
+
+  let user = users.find(x => x.name === u && x.pass === hashedPass);
+  if (!user) return alert("Špatné údaje");
+
+  localStorage.setItem("currentUser", u);
+  localStorage.setItem("role", user.role);
+  loginUser.value = "";
+  loginPass.value = "";
+  startApp();
+}
+
+function logout() {
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("role");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("adminPanel").classList.add("hidden");
+  document.getElementById("profilePanel").classList.add("hidden");
+  if (typeof editPanel !== 'undefined') document.getElementById("editPanel").classList.add("hidden");
+  document.getElementById("loginPage").classList.remove("hidden");
+
+  loginUser.value = "";
+  loginPass.value = "";
+  if (document.getElementById("loginPassConfirm")) {
+    document.getElementById("loginPassConfirm").value = "";
+  }
+}
+
+// UI operace
+function startApp() {
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("userInfo").innerText = "👤 " + localStorage.getItem("currentUser");
+  if (isAdmin()) {
+    document.getElementById("adminBtn").classList.remove("hidden");
+    renderUsers();
+  } else {
+    document.getElementById("adminBtn").classList.add("hidden");
+    document.getElementById("adminPanel").classList.add("hidden");
+  }
+  render("all");
+}
+
+function resetSearch() {
+  const sInput = document.getElementById("searchInput");
+  const sMode = document.getElementById("searchMode");
+  if (sInput) sInput.value = "";
+  if (sMode) sMode.value = "foods";
+}
+
+function isAdmin() {
+  return localStorage.getItem("role") === "admin";
+}
+
+function toggleAdmin() {
+  if (isAdmin()) {
+    document.getElementById("adminPanel").classList.toggle("hidden");
+    document.getElementById("editPanel").classList.add("hidden");
+    document.getElementById("profilePanel").classList.add("hidden");
+  }
+}
+
+function toggleProfile() {
+  document.getElementById("profilePanel").classList.toggle("hidden");
+  document.getElementById("adminPanel").classList.add("hidden");
+  document.getElementById("editPanel").classList.add("hidden");
+  document.getElementById("newName").value = localStorage.getItem("currentUser");
+}
+
+function updateNavHighlight(cat) {
+  document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+  let activeBtn = document.getElementById('btn-' + cat);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+// ADMIN panel
+function renderUsers() {
+  let list = document.getElementById("userList");
+  if (!list) return;
+  list.innerHTML = "";
+  users.forEach(u => {
+    if (u.name !== "admin") {
+      list.innerHTML += `
+        <div class="userRow">
+          <span>${u.name}</span>
+          <div style="display:flex; gap:5px">
+            <button class="reset-btn" onclick="resetUserPass('${u.name}')">Reset</button>
+            <button class="delete-btn" onclick="deleteUser('${u.name}')">Smazat</button>
+          </div>
+        </div>`;
+    }
+  });
+}
+
+async function resetUserPass(n) {
+  if (confirm("Resetovat heslo uživateli " + n + " na '123456'?")) {
+    let user = users.find(u => u.name === n);
+    if (user) {
+      user.pass = await hashPassword("123456");
+      await set(ref(db, 'users/' + user.name), user);
+      alert("Heslo resetováno na: 123456");
     }
   }
+}
 
-  // --- RENDER JÍDEL ---
-  function render(cat, customList = null) {
-    currentCategory = cat;
-    updateNavHighlight(cat);
-    let fDiv = document.getElementById("foods");
-    fDiv.innerHTML = "";
-    let user = localStorage.getItem("currentUser");
-    let list = customList || foods;
-
-    if (!customList) {
-      if (cat === 'favorite') list = foods.filter(f => f.favorites?.includes(user));
-      else if (cat === 'leaderboard') {
-        list = [...foods].sort((a, b) => {
-          let aV = a.ratings ? a.ratings.reduce((s, r) => s + r.val, 0) / (a.ratings.length || 1) : 0;
-          let bV = b.ratings ? b.ratings.reduce((s, r) => s + r.val, 0) / (b.ratings.length || 1) : 0;
-          return bV - aV;
-        });
-      } else if (cat !== 'all') list = foods.filter(f => f.category === cat);
+async function deleteUser(n) {
+  if (confirm("Opravdu smazat uživatele " + n + "?")) {
+    await set(ref(db, 'users/' + n), null);
+    for (const f of foods) {
+      if (f.comments) f.comments = f.comments.filter(c => c.user !== n);
+      if (f.voters) f.voters = f.voters.filter(v => v !== n);
+      if (f.ratings) f.ratings = f.ratings.filter(r => r.user !== n);
+      if (f.favorites) f.favorites = f.favorites.filter(fav => fav !== n);
+      await set(ref(db, 'foods/' + f.id), f);
     }
+  }
+}
 
-    if (list.length === 0) {
-      fDiv.innerHTML = `<div class="empty-msg">Tady zatím nic není...</div>`;
-      return;
-    }
+// CRUD nad jídly
+function render(cat, customList = null) {
+  currentCategory = cat;
+  updateNavHighlight(cat);
+  let fDiv = document.getElementById("foods");
+  fDiv.innerHTML = "";
+  let user = localStorage.getItem("currentUser");
+  let list = customList || foods.slice();
 
-    list.forEach((f) => {
-      let totalVal = f.ratings ? f.ratings.reduce((sum, r) => sum + r.val, 0) : 0;
-      let avg = f.ratings && f.ratings.length ? (totalVal / f.ratings.length).toFixed(1) : "0";
-      let hasVoted = f.voters && f.voters.includes(user) && !isAdmin();
+  if (!customList) {
+    if (cat === 'favorite') list = foods.filter(f => f.favorites?.includes(user));
+    else if (cat === 'leaderboard') {
+      list = [...foods].sort((a, b) => {
+        let aV = a.ratings ? a.ratings.reduce((s, r) => s + r.val, 0) / (a.ratings.length || 1) : 0;
+        let bV = b.ratings ? b.ratings.reduce((s, r) => s + r.val, 0) / (b.ratings.length || 1) : 0;
+        return bV - aV;
+      });
+    } else if (cat !== 'all') list = foods.filter(f => f.category === cat);
+  }
 
-      // --- LOGIKA VLÁKEN KOMENTÁŘŮ ---
-let mainComments = (f.comments || []).filter(c => !c.parentId);
-                  let commsHtml = mainComments.reverse().map(c => {
-        let replies = (f.comments || []).filter(r => r.parentId === c.id);
-let repliesHtml = replies.map(r => {
-          let rId = r.id;
-          return `
-            <div class="comment reply" data-comment-id="${r.id}" style="margin-left: 20px; border-left: 2px solid #ff9800; background: rgba(0,0,0,0.2); padding: 4px 8px; margin: 2px 0;">
-              <div class="comm-header" style="margin-bottom: 0;">
-                <b style="color: #ff9800;">${r.user}</b>
-                <span class="comm-date" style="font-size: 0.9em;">${r.date || ""} ${r.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${rId})">✕</span>` : ""}</span>
-              </div>
-              <div style="line-height: 1.2;">${r.text}</div>
-            </div>`;
-        }).join("");
+  if (list.length === 0) {
+    fDiv.innerHTML = `<div class="empty-msg">Tady zatím nic není...</div>`;
+    return;
+  }
 
-        let cId = c.id;
+  list.forEach((f) => {
+    let totalVal = f.ratings ? f.ratings.reduce((sum, r) => sum + r.val, 0) : 0;
+    let avg = f.ratings && f.ratings.length ? (totalVal / f.ratings.length).toFixed(1) : "0";
+    let hasVoted = f.voters && f.voters.includes(user) && !isAdmin();
+
+    let mainComments = (f.comments || []).filter(c => !c.parentId);
+    let commsHtml = mainComments.reverse().map(c => {
+      let replies = (f.comments || []).filter(r => r.parentId === c.id);
+      let repliesHtml = replies.map(r => {
+        let rId = r.id;
         return `
-          <div class="comment-group" style="margin-bottom: 8px;">
-            <div class="comment" data-comment-id="${c.id}" style="padding: 4px 8px; margin: 2px 0;">
-              <div class="comm-header" style="margin-bottom: 0;">
-                <b style="color: #ff9800;">${c.user}</b>
-                <span class="comm-date" style="font-size: 0.9em;">${c.date || ""} ${c.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${cId})">✕</span>` : ""}</span>
-              </div>
-              <div style="line-height: 1.2;">${c.text}</div>
-              <div style="text-align:right; margin-top: 2px; line-height: 1;">
-                <small style="cursor:pointer; color:#ff9800; font-weight:bold; font-size: 0.85em;"
-                       onclick="setReply(${f.id}, ${c.id}, '${c.user}')">Odpovědět</small>
-              </div>
+          <div class="comment reply" data-comment-id="${r.id}" style="margin-left: 20px; border-left: 2px solid #ff9800; background: rgba(0,0,0,0.2); padding: 4px 8px; margin: 2px 0;">
+            <div class="comm-header" style="margin-bottom: 0;">
+              <b style="color: #ff9800;">${r.user}</b>
+              <span class="comm-date" style="font-size: 0.9em;">${r.date || ""} ${r.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${rId})">✕</span>` : ""}</span>
             </div>
-            ${repliesHtml}
+            <div style="line-height: 1.2;">${r.text}</div>
           </div>`;
       }).join("");
 
+      let cId = c.id;
+      return `
+        <div class="comment-group" style="margin-bottom: 8px;">
+          <div class="comment" data-comment-id="${c.id}" style="padding: 4px 8px; margin: 2px 0;">
+            <div class="comm-header" style="margin-bottom: 0;">
+              <b style="color: #ff9800;">${c.user}</b>
+              <span class="comm-date" style="font-size: 0.9em;">${c.date || ""} ${c.time || ""} ${isAdmin() ? `<span style="cursor:pointer; color:red" onclick="delComm(${f.id}, ${cId})">✕</span>` : ""}</span>
+            </div>
+            <div style="line-height: 1.2;">${c.text}</div>
+            <div style="text-align:right; margin-top: 2px; line-height: 1;">
+              <small style="cursor:pointer; color:#ff9800; font-weight:bold; font-size: 0.85em;"
+                     onclick="setReply(${f.id}, ${c.id}, '${c.user}')">Odpovědět</small>
+            </div>
+          </div>
+          ${repliesHtml}
+        </div>`;
+    }).join("");
 
+    fDiv.innerHTML += `
+    <div class="card" data-food-id="${f.id}">
+      <h3 style="margin-top:0">${f.name} <span class="fav-icon" onclick="toggleFavorite(${f.id})">${f.favorites?.includes(user) ? '💛' : '🤍'}</span></h3>
+      <small>${f.category}</small>
+      <img src="${f.image}" onclick="openImage('${f.image}')" style="cursor:pointer">
+      <p>⭐ Průměr: <strong>${avg}</strong> (${f.ratings ? f.ratings.length : 0}x)</p>
+      ${hasVoted ? '<div style="color:#ff9800; font-weight:bold;">✓ Už jsi hlasoval!</div>' : `
+        <div class="stars">
+          <span onclick="rate(${f.id}, 5)">★</span><span onclick="rate(${f.id}, 4)">★</span>
+          <span onclick="rate(${f.id}, 3)">★</span><span onclick="rate(${f.id}, 2)">★</span>
+          <span onclick="rate(${f.id}, 1)">★</span>
+        </div>`}
+      <div class="comment-list">${commsHtml || '<div style="opacity:0.3; font-size:0.8em; padding:10px;">Zatím žádné komentáře...</div>'}</div>
+      <div id="replyInfo${f.id}" class="hidden" style="font-size: 0.75em; color: #ff9800; margin-bottom: 5px; padding-left: 5px;"></div>
+      <div style="display:flex; gap:5px; margin-top:10px;">
+        <input id="commInp${f.id}" placeholder="Komentář..." style="flex:1; padding:8px; border-radius:5px; border:none; color:black;">
+        <button id="commBtn${f.id}" onclick="addComm(${f.id})" style="padding:8px 15px;">OK</button>
+      </div>
+      ${isAdmin() ? `
+        <div style="margin-top:10px;">
+          <button onclick="openEdit(${f.id})" style="background:#555">✏️ Upravit</button>
+          <button onclick="deleteFood(${f.id})" style="background:#e74c3c">🗑️ Smazat</button>
+        </div>` : ''}
+    </div>`;
+  });
+}
 
-      // --- RENDER KARTY JÍDLA ---
-      fDiv.innerHTML += `
-      <div class="card" data-food-id="${f.id}">
-        <h3 style="margin-top:0">${f.name} <span class="fav-icon" onclick="toggleFavorite(${f.id})">${f.favorites?.includes(user) ? '💛' : '🤍'}</span></h3>
-        <small>${f.category}</small>
-        <img src="${f.image}" onclick="openImage('${f.image}')" style="cursor:pointer">
-        <p>⭐ Průměr: <strong>${avg}</strong> (${f.ratings ? f.ratings.length : 0}x)</p>
-       
-        ${hasVoted ? '<div style="color:#ff9800; font-weight:bold;">✓ Už jsi hlasoval!</div>' : `
-          <div class="stars">
-            <span onclick="rate(${f.id}, 5)">★</span><span onclick="rate(${f.id}, 4)">★</span>
-            <span onclick="rate(${f.id}, 3)">★</span><span onclick="rate(${f.id}, 2)">★</span>
-            <span onclick="rate(${f.id}, 1)">★</span>
-          </div>`}
-       
-        <div class="comment-list">${commsHtml || '<div style="opacity:0.3; font-size:0.8em; padding:10px;">Zatím žádné komentáře...</div>'}</div>
-       
-        <div id="replyInfo${f.id}" class="hidden" style="font-size: 0.75em; color: #ff9800; margin-bottom: 5px; padding-left: 5px;"></div>
-       
-        <div style="display:flex; gap:5px; margin-top:10px;">
-          <input id="commInp${f.id}" placeholder="Komentář..." style="flex:1; padding:8px; border-radius:5px; border:none; color:black;">
-          <button id="commBtn${f.id}" onclick="addComm(${f.id})" style="padding:8px 15px;">OK</button>
-        </div>
-       
-        ${isAdmin() ? `
-          <div style="margin-top:10px;">
-            <button onclick="openEdit(${f.id})" style="background:#555">✏️ Upravit</button>
-            <button onclick="deleteFood(${f.id})" style="background:#e74c3c">🗑️ Smazat</button>
-          </div>` : ''}
-      </div>`;
-    });}
-
-// --- RATE / COMMENT / FOOD MGMT ---
+// Hodnocení, komentáře, oblíbené
 async function rate(id, val) {
   let f = foods.find(x => x.id == id);
   let user = localStorage.getItem("currentUser");
@@ -1027,9 +1007,7 @@ async function rate(id, val) {
   if (!f.voters) f.voters = [];
   if (!f.ratings) f.ratings = [];
 
-  if (!isAdmin() && f.voters.includes(user)) {
-    return;
-  }
+  if (!isAdmin() && f.voters.includes(user)) return;
 
   f.ratings.push({ user, val });
   f.voters.push(user);
@@ -1081,7 +1059,6 @@ function cancelReply(foodId) {
   if (btn) btn.setAttribute("onclick", `addComm(${foodId})`);
 }
 
-
 function addFood() {
   let fileInput = document.getElementById("file"), n = document.getElementById("name").value.trim();
   if (!fileInput.files || !fileInput.files.length || !n) return alert("Název a foto!");
@@ -1109,30 +1086,6 @@ async function deleteFood(id) {
   await set(ref(db, 'foods/' + id), null);
 }
 
-  function showRegister() {
-    document.getElementById("registerExtra").classList.remove("hidden");
-    document.getElementById("loginGroup").classList.add("hidden");
-    document.getElementById("registerGroup").classList.remove("hidden");
-    loginPassConfirm.value = "";
-  }
-
-  function showLogin() {
-    document.getElementById("registerExtra").classList.add("hidden");
-    document.getElementById("loginGroup").classList.remove("hidden");
-    document.getElementById("registerGroup").classList.add("hidden");
-  }
-
-  function showLeaderboard() {
-    let sorted = [...foods].sort((a, b) => {
-      let avgA = a.ratings.length ? a.ratings.reduce((s, r) => s + r.val, 0) / a.ratings.length : 0;
-      let avgB = b.ratings.length ? b.ratings.reduce((s, r) => s + r.val, 0) / b.ratings.length : 0;
-      return avgB - avgA;
-    });
-    render("leaderboard", sorted);
-  }
-
-
-
 async function toggleFavorite(id) {
   let f = foods.find(x => x.id == id);
   let user = localStorage.getItem("currentUser");
@@ -1148,198 +1101,193 @@ async function toggleFavorite(id) {
   await set(ref(db, 'foods/' + f.id), f);
 }
 
-  function resetVotes() {
-    let id = document.getElementById("editId").value;
-    let f = foods.find(x => x.id == id);
-    if (!f) return;
-    if (confirm("Opravdu chceš vynulovat hodnocení?")) {
-      f.ratings = [];
-      f.voters = [];
-await set(ref(db, 'foods/' + f.id), f);
-    }
+async function resetVotes() {
+  let id = document.getElementById("editId").value;
+  let f = foods.find(x => x.id == id);
+  if (!f) return;
+  if (confirm("Opravdu chceš vynulovat hodnocení?")) {
+    f.ratings = [];
+    f.voters = [];
+    await set(ref(db, 'foods/' + f.id), f);
   }
-
-  // --- VYHLEDÁVÁNÍ S ZVÝRAZŇOVÁNÍM ---
-  function filterFoods() {
-    const query = document.getElementById("searchInput").value.toLowerCase();
-    const mode = document.getElementById("searchMode").value;
-    const fDiv = document.getElementById("foods");
-
-    if (!query) {
-      render(currentCategory);
-      return;
-    }
-
-    // REŽIM: HLEDÁNÍ JÍDEL
-    if (mode === "foods") {
-      let filtered = foods.filter(f => f.name.toLowerCase().includes(query));
-      render(currentCategory, filtered);
-    }
-    // REŽIM: HLEDÁNÍ ZPRÁV NEBO JMEN
-    else {
-      fDiv.innerHTML = "";
-      let found = false;
-      foods.forEach(f => {
-        if (f.comments) {
-          f.comments.forEach(c => {
-            const match = (mode === "comments")
-              ? c.text.toLowerCase().includes(query)
-              : c.user.toLowerCase().includes(query);
-            if (match) {
-              found = true;
-              fDiv.innerHTML += `
-                <div class="card" style="border-left: 5px solid #ff9800; cursor: pointer; margin-bottom:10px;" onclick="goToFood(${f.id}, ${c.id})" >
-                  <div style="display:flex; justify-content:space-between; opacity:0.7; font-size:0.85em; margin-bottom:5px;">
-                    <span>Jídlo: <b>${f.name}</b></span>
-                    <span>${c.date || ""}</span>
-                  </div>
-                  <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                    <b style="color: #ff9800;">${c.user}:</b> ${c.text}
-                  </div>
-                  <div style="text-align:right; color:#ff9800; font-size:0.75em; margin-top:8px; font-weight:bold;">
-                    Přejít k jídlu ➔
-                  </div>
-                </div>`;
-            }
-          });
-        }
-      });
-      if (!found) {
-        fDiv.innerHTML = `<div class="empty-msg">Nic nenalezeno pro výraz "${query}"</div>`;
-      }
-    }
-  }
-
-  // NAVIGACE NA JÍDLO S ZVÝRAZŇOVÁNÍM KARTY A KOMENTÁŘE
-function goToFood(foodId, commentId) {
-    resetSearch();
-    render(currentCategory);
-   
-    setTimeout(() => {
-        const foodCard = document.querySelector(`[data-food-id="${foodId}"]`);
-        if (!foodCard) return;
-
-        // 1. Scroll celého okna na kartu jídla
-        foodCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        foodCard.classList.add('highlight-card');
-        setTimeout(() => foodCard.classList.remove('highlight-card'), 2000);
-
-        // 2. Najdeme konkrétní komentář (už i odpověď díky tvé úpravě)
-        const targetComm = document.querySelector(`[data-comment-id="${commentId}"]`);
-        const commentList = foodCard.querySelector('.comment-list');
-       
-        if (targetComm && commentList) {
-            // KLÍČOVÝ VÝPOČET: Rozdíl pozic mezi seznamem a komentářem
-            const listRect = commentList.getBoundingClientRect();
-            const commRect = targetComm.getBoundingClientRect();
-           
-            // Toto pošle komentář přesně k hornímu okraji okna comment-list
-            const targetScrollTop = (commRect.top - listRect.top) + commentList.scrollTop;
-
-            commentList.scrollTo({
-                top: targetScrollTop,
-                behavior: 'smooth'
-            });
-           
-            // 3. Zvýraznění
-            targetComm.classList.add('highlight-comment');
-            setTimeout(() => targetComm.classList.remove('highlight-comment'), 2000);
-        }
-    }, 450);
 }
 
-  // --- MODAL PRO OBRÁZKY ---
-  function openImage(imgSrc) {
-    const modal = document.getElementById("imageModal");
-    const expandedImg = document.getElementById("expandedImg");
-    if (modal && expandedImg) {
-      modal.style.display = "flex";
-      expandedImg.src = imgSrc;
-    }
+function showRegister() {
+  document.getElementById("registerExtra").classList.remove("hidden");
+  document.getElementById("loginGroup").classList.add("hidden");
+  document.getElementById("registerGroup").classList.remove("hidden");
+  loginPassConfirm.value = "";
+}
+
+function showLogin() {
+  document.getElementById("registerExtra").classList.add("hidden");
+  document.getElementById("loginGroup").classList.remove("hidden");
+  document.getElementById("registerGroup").classList.add("hidden");
+}
+
+function showLeaderboard() {
+  let sorted = [...foods].sort((a, b) => {
+    let avgA = a.ratings.length ? a.ratings.reduce((s, r) => s + r.val, 0) / a.ratings.length : 0;
+    let avgB = b.ratings.length ? b.ratings.reduce((s, r) => s + r.val, 0) / b.ratings.length : 0;
+    return avgB - avgA;
+  });
+  render("leaderboard", sorted);
+}
+
+function filterFoods() {
+  const query = document.getElementById("searchInput").value.toLowerCase();
+  const mode = document.getElementById("searchMode").value;
+  const fDiv = document.getElementById("foods");
+
+  if (!query) {
+    render(currentCategory);
+    return;
   }
 
-  window.onclick = function(event) {
-    const modal = document.getElementById("imageModal");
-    if (event.target == modal || event.target.classList.contains('close-modal')) {
-      modal.style.display = "none";
+  if (mode === "foods") {
+    let filtered = foods.filter(f => f.name.toLowerCase().includes(query));
+    render(currentCategory, filtered);
+  }
+  else {
+    fDiv.innerHTML = "";
+    let found = false;
+    foods.forEach(f => {
+      if (f.comments) {
+        f.comments.forEach(c => {
+          const match = (mode === "comments")
+            ? c.text.toLowerCase().includes(query)
+            : c.user.toLowerCase().includes(query);
+          if (match) {
+            found = true;
+            fDiv.innerHTML += `
+              <div class="card" style="border-left: 5px solid #ff9800; cursor: pointer; margin-bottom:10px;" onclick="goToFood(${f.id}, ${c.id})" >
+                <div style="display:flex; justify-content:space-between; opacity:0.7; font-size:0.85em; margin-bottom:5px;">
+                  <span>Jídlo: <b>${f.name}</b></span>
+                  <span>${c.date || ""}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                  <b style="color: #ff9800;">${c.user}:</b> ${c.text}
+                </div>
+                <div style="text-align:right; color:#ff9800; font-size:0.75em; margin-top:8px; font-weight:bold;">
+                  Přejít k jídlu ➔
+                </div>
+              </div>`;
+          }
+        });
+      }
+    });
+    if (!found) {
+      fDiv.innerHTML = `<div class="empty-msg">Nic nenalezeno pro výraz "${query}"</div>`;
     }
   }
+}
 
-document.addEventListener("keydown", function(event) {
-  // Kontrola, jestli byl stisknut Enter
+function goToFood(foodId, commentId) {
+  resetSearch();
+  render(currentCategory);
+
+  setTimeout(() => {
+    const foodCard = document.querySelector(`[data-food-id="${foodId}"]`);
+    if (!foodCard) return;
+    foodCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    foodCard.classList.add('highlight-card');
+    setTimeout(() => foodCard.classList.remove('highlight-card'), 2000);
+    const targetComm = foodCard.querySelector(`[data-comment-id="${commentId}"]`);
+    const commentList = foodCard.querySelector('.comment-list');
+    if (targetComm && commentList) {
+      const listRect = commentList.getBoundingClientRect();
+      const commRect = targetComm.getBoundingClientRect();
+      const targetScrollTop = (commRect.top - listRect.top) + commentList.scrollTop;
+      commentList.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+      targetComm.classList.add('highlight-comment');
+      setTimeout(() => targetComm.classList.remove('highlight-comment'), 2000);
+    }
+  }, 450);
+}
+
+function openImage(imgSrc) {
+  const modal = document.getElementById("imageModal");
+  const expandedImg = document.getElementById("expandedImg");
+  if (modal && expandedImg) {
+    modal.style.display = "flex";
+    expandedImg.src = imgSrc;
+  }
+}
+
+window.onclick = function (event) {
+  const modal = document.getElementById("imageModal");
+  if (event.target == modal || event.target.classList.contains('close-modal')) {
+    modal.style.display = "none";
+  }
+}
+
+document.addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
-    // Zjistíme, v jakém prvku jsme (např. input pro komentář nebo login)
     const activeElement = document.activeElement;
-   
     if (activeElement.tagName === "INPUT") {
-      // Najdeme nejbližší tlačítko v tom samém divu (kontejneru)
       const parent = activeElement.parentElement;
       const btn = parent.querySelector("button");
-     
       if (btn) {
-        event.preventDefault(); // Zabrání nechtěnému reloadu stránky
-        btn.click(); // Simuluje kliknutí na tlačítko
+        event.preventDefault();
+        btn.click();
       }
     }
   }
 });
 
-  // --- FUNKCE PRO ZOBRAZENÍ/SKRYTÍ HESLA ---
+async function updateProfile() {
+  let oldName = localStorage.getItem("currentUser");
+  let user = users.find(u => u.name === oldName);
+  let newN = document.getElementById("newName").value.trim();
 
-
-  // --- AKTUALIZOVANÁ FUNKCE PRO PROFIL ---
-  async function updateProfile() {
-    let oldName = localStorage.getItem("currentUser");
-    let user = users.find(u => u.name === oldName);
-    let newN = newName.value.trim();
-
-    if (newN.length > 2 && newN !== oldName) {
-      if (users.find(u => u.name === newN)) return alert("Jméno už existuje");
-      foods.forEach(f => {
-        if (f.comments) f.comments.forEach(c => { if (c.user === oldName) c.user = newN; });
-        if (f.voters) f.voters = f.voters.map(v => v === oldName ? newN : v);
-        if (f.ratings) f.ratings.forEach(r => { if (r.user === oldName) r.user = newN; });
-        if (f.favorites) f.favorites = f.favorites.map(fav => fav === oldName ? newN : fav);
-      });
-      user.name = newN;
-      localStorage.setItem("currentUser", newN);
+  if (newN.length > 2 && newN !== oldName) {
+    if (users.find(u => u.name === newN)) return alert("Jméno už existuje");
+    for (const f of foods) {
+      if (f.comments) f.comments.forEach(c => { if (c.user === oldName) c.user = newN; });
+      if (f.voters) f.voters = f.voters.map(v => v === oldName ? newN : v);
+      if (f.ratings) f.ratings.forEach(r => { if (r.user === oldName) r.user = newN; });
+      if (f.favorites) f.favorites = f.favorites.map(fav => fav === oldName ? newN : fav);
+      await set(ref(db, 'foods/' + f.id), f);
     }
-
-    let newPass = document.getElementById("newPass").value.trim();
-    let newPassConfirm = document.getElementById("newPassConfirm").value.trim();
-    
-    if (newPass.length > 0 || newPassConfirm.length > 0) {
-      if (newPass !== newPassConfirm) {
-        return alert("Hesla se neshodují!");
-      }
-      if (newPass.length < 3) {
-        return alert("Heslo musí mít alespoň 3 znaky!");
-      }
-      user.pass = await hashPassword(newPass);
-      document.getElementById("newPass").value = "";
-      document.getElementById("newPassConfirm").value = "";
-      document.getElementById("newPass").type = "password";
-      document.getElementById("newPassConfirm").type = "password";
-		await set(ref(db, 'users/' + user.name), user);
-    }
-
-    profilePanel.classList.add("hidden");
-    startApp();
-    alert("Uloženo");
+    await set(ref(db, 'users/' + newN), { ...user, name: newN });
+    await set(ref(db, 'users/' + oldName), null);
+    localStorage.setItem("currentUser", newN);
+    user.name = newN;
   }
 
-  // --- AKTUALIZOVANÁ FUNKCE NA OTEVŘENÍ EDITACE ---
-  function openEdit(id) {
-    let f = foods.find(x => x.id == id);
-    document.getElementById("editId").value = f.id;
-    document.getElementById("editName").value = f.name;
-    document.getElementById("editCategory").value = f.category;
-    document.getElementById("editPanel").classList.remove("hidden");
-    document.getElementById("adminPanel").classList.add("hidden");
-    document.getElementById("profilePanel").classList.add("hidden");
+  let newPass = document.getElementById("newPass").value.trim();
+  let newPassConfirm = document.getElementById("newPassConfirm").value.trim();
+
+  if (newPass.length > 0 || newPassConfirm.length > 0) {
+    if (newPass !== newPassConfirm) {
+      return alert("Hesla se neshodují!");
+    }
+    if (newPass.length < 3) {
+      return alert("Heslo musí mít alespoň 3 znaky!");
+    }
+    user.pass = await hashPassword(newPass);
+    document.getElementById("newPass").value = "";
+    document.getElementById("newPassConfirm").value = "";
+    document.getElementById("newPass").type = "password";
+    document.getElementById("newPassConfirm").type = "password";
+    await set(ref(db, 'users/' + user.name), user);
   }
 
-  // --- AKTUALIZOVANÁ FUNKCE NA ULOŽENÍ EDITACE ---
+  document.getElementById("profilePanel").classList.add("hidden");
+  startApp();
+  alert("Uloženo");
+}
+
+function openEdit(id) {
+  let f = foods.find(x => x.id == id);
+  document.getElementById("editId").value = f.id;
+  document.getElementById("editName").value = f.name;
+  document.getElementById("editCategory").value = f.category;
+  document.getElementById("editPanel").classList.remove("hidden");
+  document.getElementById("adminPanel").classList.add("hidden");
+  document.getElementById("profilePanel").classList.add("hidden");
+}
+
 async function saveEdit() {
   let id = document.getElementById("editId").value;
   let f = foods.find(x => x.id == id);
@@ -1354,7 +1302,7 @@ async function saveEdit() {
   let fileInput = document.getElementById("editFile");
   if (fileInput.files && fileInput.files.length > 0) {
     let reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = async function (e) {
       f.image = e.target.result;
       await set(ref(db, 'foods/' + f.id), f);
       document.getElementById("editPanel").classList.add("hidden");
@@ -1369,84 +1317,91 @@ async function saveEdit() {
   }
 }
 
-  // --- AKTUALIZOVANÁ FUNKCE PRO SMAZÁNÍ KOMENTÁŘE ---
-  function delComm(fId, commId) {
-    let f = foods.find(x => x.id == fId);
-    if (!f || !f.comments) return;
-    
-    let commentIndex = f.comments.findIndex(c => c.id == commId);
-    if (commentIndex === -1) return;
-    
-    let commToDelete = f.comments[commentIndex];
-    
-    // Pokud je to hlavní komentář, smaže i odpovědi na něj
-    if (commToDelete && !commToDelete.parentId) {
-      f.comments = f.comments.filter(c => c.parentId !== commToDelete.id);
-    }
+async function delComm(fId, commId) {
+  let f = foods.find(x => x.id == fId);
+  if (!f || !f.comments) return;
+  let commentIndex = f.comments.findIndex(c => c.id == commId);
+  if (commentIndex === -1) return;
+  let commToDelete = f.comments[commentIndex];
 
-    // Odstraní komentář
-    f.comments = f.comments.filter(c => c.id !== commId);
-await set(ref(db, 'foods/' + f.id), f);
+  if (commToDelete && !commToDelete.parentId) {
+    f.comments = f.comments.filter(c => c.parentId !== commToDelete.id);
   }
-  
-  // --- SHOW/HIDE HESLO - POUZE KLIKNUTÍм NA IKONKU ---
-  function togglePasswordVisibility(inputId) {
-    const input = document.getElementById(inputId);
-    const wrapper = input.parentElement;
-    const icon = wrapper.querySelector('.password-toggle-icon i');
-    
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.classList.remove('fa-regular');
-      icon.classList.add('fa-solid');
-    } else {
-      input.type = 'password';
-      icon.classList.remove('fa-solid');
-      icon.classList.add('fa-regular');
+  f.comments = f.comments.filter(c => c.id !== commId);
+  await set(ref(db, 'foods/' + f.id), f);
+}
+
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  const wrapper = input.parentElement;
+  const icon = wrapper.querySelector('.password-toggle-icon i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-regular');
+    icon.classList.add('fa-solid');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-solid');
+    icon.classList.add('fa-regular');
+  }
+}
+
+function rerender() {
+  const scrollPositions = {};
+  document.querySelectorAll('.comment-list').forEach(list => {
+    const card = list.closest('.card');
+    if (card) {
+      const foodId = card.getAttribute('data-food-id');
+      scrollPositions[foodId] = list.scrollTop;
     }
-  }
-  
-    function rerender() {
-    const scrollPositions = {};
+  });
+
+  if (currentCategory === "leaderboard") showLeaderboard();
+  else render(currentCategory);
+
+  setTimeout(() => {
     document.querySelectorAll('.comment-list').forEach(list => {
       const card = list.closest('.card');
       if (card) {
         const foodId = card.getAttribute('data-food-id');
-        scrollPositions[foodId] = list.scrollTop;
+        if (scrollPositions[foodId] !== undefined) {
+          list.scrollTop = scrollPositions[foodId];
+        }
       }
     });
-
-    if (currentCategory === "leaderboard") {
-      showLeaderboard();
-    } else {
-      render(currentCategory);
-    }
-
-    setTimeout(() => {
-      document.querySelectorAll('.comment-list').forEach(list => {
-        const card = list.closest('.card');
-        if (card) {
-          const foodId = card.getAttribute('data-food-id');
-          if (scrollPositions[foodId] !== undefined) {
-            list.scrollTop = scrollPositions[foodId];
-          }
-        }
-      });
-    }, 0);
-  }
-
-async function resetVotes() {
-  let id = document.getElementById("editId").value;
-  let f = foods.find(x => x.id == id);
-  if (!f) return;
-  if (confirm("Opravdu chceš vynulovat hodnocení?")) {
-    f.ratings = [];
-    f.voters = [];
-    await set(ref(db, 'foods/' + f.id), f);
-  }
+  }, 0);
 }
 
+// Export funkcí na window pro onclick/oninput v HTML
+window.register = register;
+window.login = login;
+window.logout = logout;
+window.toggleAdmin = toggleAdmin;
+window.toggleProfile = toggleProfile;
+window.resetUserPass = resetUserPass;
+window.deleteUser = deleteUser;
+window.addFood = addFood;
+window.saveEdit = saveEdit;
+window.resetVotes = resetVotes;
+window.addComm = addComm;
+window.setReply = setReply;
+window.cancelReply = cancelReply;
+window.deleteFood = deleteFood;
+window.toggleFavorite = toggleFavorite;
+window.showRegister = showRegister;
+window.showLogin = showLogin;
+window.showLeaderboard = showLeaderboard;
+window.openEdit = openEdit;
+window.delComm = delComm;
+window.filterFoods = filterFoods;
+window.goToFood = goToFood;
+window.openImage = openImage;
+window.togglePasswordVisibility = togglePasswordVisibility;
 
+// Inicializace
+initSecret();
+initFirebaseSync();
+initAdmin();
 	
 </script>
 	
