@@ -702,15 +702,32 @@
 </div>
 
 <script>
+
+// --- Firebase Realtime Sync ---
+
+let users = [];
+let foods = [];
+let currentCategory = "all";
+
+// POSLOUCHEJ automaticky změny v DB a aktualizuj vše živě:
+function initFirebaseSync() {
+  // Jídla
+  onValue(ref(db, 'foods'), (snapshot) => {
+    foods = snapshot.exists() ? Object.values(snapshot.val() || {}) : [];
+    rerender(); // Aktualizace UI
+  });
+  // Uživatelé
+  onValue(ref(db, 'users'), (snapshot) => {
+    users = snapshot.exists() ? Object.values(snapshot.val() || {}) : [];
+    renderUsers(); // pro admin panel
+  });
+}
+initFirebaseSync();
+	
   // --- GLOBÁLNÍ PROMĚNNÉ ---
   let users = [];
 let foods = [];
   let currentCategory = "all";
-
-  function save() {
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("foods", JSON.stringify(foods));
-  }
 
   function resetSearch() {
     const sInput = document.getElementById("searchInput");
@@ -758,8 +775,7 @@ let foods = [];
     if (users.find(x => x.name === u)) return alert("Uživatel už existuje");
 
     const hashedPass = await hashPassword(p);
-    users.push({ name: u, pass: hashedPass, role: "user" });
-    save();
+await set(ref(db, 'users/' + u), { name: u, pass: hashedPass, role: "user" });
 
     alert("Registrace proběhla v pořádku! Teď se můžeš přihlásit.");
     loginPass.value = "";
@@ -980,12 +996,10 @@ let repliesHtml = replies.map(r => {
     });}
 
 // --- RATE / COMMENT / FOOD MGMT ---
-function rate(id, val) {
+async function rate(id, val) {
   let f = foods.find(x => x.id == id);
-
-  if (!f) return;
-
   let user = localStorage.getItem("currentUser");
+  if (!f || !user) return;
 
   if (!f.voters) f.voters = [];
   if (!f.ratings) f.ratings = [];
@@ -994,61 +1008,33 @@ function rate(id, val) {
     return;
   }
 
-  f.ratings.push({
-    user: user,
-    val: val
-  });
-
+  f.ratings.push({ user, val });
   f.voters.push(user);
 
-  save();
-  rerender();
+  await set(ref(db, 'foods/' + f.id), f);
 }
 
-function addComm(id, parentCommId = null) {
+async function addComm(id, parentCommId = null) {
   let inp = document.getElementById("commInp" + id);
   if (!inp.value.trim()) return;
-
   let f = foods.find(x => x.id == id);
-  if (!f.comments) f.comments = [];
-
-  // Ulož aktuální pozici scrollu
-  const card = document.querySelector(`[data-food-id="${id}"]`);
-  const commentList = card.querySelector('.comment-list');
-  const scrollTop = commentList ? commentList.scrollTop : 0;
+  if (!f || !f.comments) f.comments = [];
 
   let now = new Date();
-  let timeStr = now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0');
-  let dateStr = now.getDate() + "." + (now.getMonth() + 1) + ".";
-
-  f.comments.push({
+  let comment = {
     id: Date.now(),
     parentId: parentCommId,
     user: localStorage.getItem("currentUser"),
     text: inp.value,
-    time: timeStr,
-    date: dateStr
-  });
+    time: now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0'),
+    date: now.getDate() + "." + (now.getMonth() + 1) + "."
+  };
+  f.comments.push(comment);
+
+  await set(ref(db, 'foods/' + f.id), f);
 
   inp.value = "";
   cancelReply(id);
-  save();
-
-  // Rerender a vrátí pozici scrollu
-  if (currentCategory === "leaderboard") {
-    showLeaderboard();
-  } else {
-    render(currentCategory);
-  }
-
-  // Vrátí se na původní pozici
-  setTimeout(() => {
-    const newCard = document.querySelector(`[data-food-id="${id}"]`);
-    const newCommentList = newCard.querySelector('.comment-list');
-    if (newCommentList) {
-      newCommentList.scrollTop = scrollTop;
-    }
-  }, 0);
 }
 
 function setReply(foodId, commId, userName) {
@@ -1073,37 +1059,32 @@ function cancelReply(foodId) {
 }
 
 
-
-  function addFood() {
-    let fileInput = document.getElementById("file"), n = document.getElementById("name").value.trim();
-    if (!fileInput.files || !fileInput.files.length || !n) return alert("Název a foto!");
-    let reader = new FileReader();
-    reader.onload = (e) => {
-      foods.unshift({
-        id: Date.now(),
-        name: n,
-        category: document.getElementById("category").value,
-        image: e.target.result,
-        ratings: [],
-        voters: [],
-        favorites: [],
-        comments: []
-      });
-      save();
-      render("all");
-      document.getElementById("name").value = "";
-      document.getElementById("file").value = "";
+function addFood() {
+  let fileInput = document.getElementById("file"), n = document.getElementById("name").value.trim();
+  if (!fileInput.files || !fileInput.files.length || !n) return alert("Název a foto!");
+  let reader = new FileReader();
+  reader.onload = async (e) => {
+    const food = {
+      id: Date.now(),
+      name: n,
+      category: document.getElementById("category").value,
+      image: e.target.result,
+      ratings: [],
+      voters: [],
+      favorites: [],
+      comments: []
     };
-    reader.readAsDataURL(fileInput.files[0]);
-  }
+    await set(ref(db, 'foods/' + food.id), food);
+    document.getElementById("name").value = "";
+    document.getElementById("file").value = "";
+  };
+  reader.readAsDataURL(fileInput.files[0]);
+}
 
-  function deleteFood(id) {
-    if (confirm("Smazat?")) {
-      foods = foods.filter(f => f.id !== id);
-      save();
-      render(currentCategory);
-    }
-  }
+async function deleteFood(id) {
+  if (!confirm("Smazat?")) return;
+  await set(ref(db, 'foods/' + id), null);
+}
 
   function showRegister() {
     document.getElementById("registerExtra").classList.remove("hidden");
@@ -1129,16 +1110,11 @@ function cancelReply(foodId) {
 
 
 
-function toggleFavorite(id) {
+async function toggleFavorite(id) {
   let f = foods.find(x => x.id == id);
-
-  if (!f) return;
-
   let user = localStorage.getItem("currentUser");
-
-  if (!f.favorites) {
-    f.favorites = [];
-  }
+  if (!f || !user) return;
+  if (!f.favorites) f.favorites = [];
 
   if (f.favorites.includes(user)) {
     f.favorites = f.favorites.filter(u => u !== user);
@@ -1146,8 +1122,7 @@ function toggleFavorite(id) {
     f.favorites.push(user);
   }
 
-  save();
-  rerender();
+  await set(ref(db, 'foods/' + f.id), f);
 }
 
   function resetVotes() {
@@ -1477,86 +1452,6 @@ const db = getDatabase(firebaseApp);
 
   initSecret();
 
-  // Načti data z Firebase
-  function loadFromFirebase() {
-    try {
-onValue(ref(db, 'foods'), (snapshot) => {
-  if (snapshot.exists()) {
-    foods = Object.values(snapshot.val() || {});
-
-    // Oprava starých dat
-    foods.forEach(f => {
-if (!Array.isArray(f.comments)) f.comments = [];
-if (!Array.isArray(f.ratings)) f.ratings = [];
-if (!Array.isArray(f.voters)) f.voters = [];
-if (!Array.isArray(f.favorites)) {
-  f.favorites = [];
-}
-    });
-
-    localStorage.setItem("foods", JSON.stringify(foods));
-
-if (!document.getElementById("app").classList.contains("hidden")) {
-  rerender();
-}
-  } else {
-    foods = [];
-  }
-});
-
-onValue(ref(db, 'users'), (snapshot) => {
-  if (snapshot.exists()) {
-    users = Object.values(snapshot.val() || {});
-    localStorage.setItem("users", JSON.stringify(users));
-  } else {
-    users = [];
-  }
-});
-    } catch (error) {
-      console.log("Firebase načítání:", error);
-    }
-  }
-
-  // Uloži do Firebase
-async function saveToFirebase() {
-  try {
-
-    const foodsObject = {};
-    foods.forEach(food => {
-      foodsObject[food.id] = food;
-    });
-
-    const usersObject = {};
-    users.forEach(user => {
-      usersObject[user.name] = user;
-    });
-
-    // nejdřív stáhne aktuální data
-    const foodsSnap = await get(ref(db, 'foods'));
-    const usersSnap = await get(ref(db, 'users'));
-
-    const currentFoods = foodsSnap.exists() ? foodsSnap.val() : {};
-    const currentUsers = usersSnap.exists() ? usersSnap.val() : {};
-
-    // merge místo přepisu
-    const mergedFoods = {
-      ...currentFoods,
-      ...foodsObject
-    };
-
-    const mergedUsers = {
-      ...currentUsers,
-      ...usersObject
-    };
-
-    await set(ref(db, 'foods'), mergedFoods);
-    await set(ref(db, 'users'), mergedUsers);
-
-  } catch (error) {
-    console.error("Firebase chyba:", error);
-  }
-}
-
   // Přepis save()
 function saveLocal() {
   localStorage.setItem("users", JSON.stringify(users));
@@ -1574,7 +1469,6 @@ window.save = function () {
 };
 
 window.loadFromFirebase = loadFromFirebase;
-loadFromFirebase();
 </script>
 	
 </body>
